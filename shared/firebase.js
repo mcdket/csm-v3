@@ -5,7 +5,7 @@ window.CSM = (function() {
     projectId: "contractsocialmanager",
     storageBucket: "contractsocialmanager.firebasestorage.app",
     messagingSenderId: "887068908069",
-    appId: "1:887068908069:web:d5ffefd4a16b54c545fdcc"
+    appId: "1:887068908069:web:d5a039e90add6c2c45fdcc"
   };
 
   if (!firebase.apps.length) {

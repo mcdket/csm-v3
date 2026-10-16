@@ -1,292 +1,195 @@
 <!DOCTYPE html>
-<html lang="fr" class="theme-light">
+<html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pointages - Contract Social Manager</title>
-  <link rel="icon" href="../shared/200.webp" type="image/webp">
-  <link rel="stylesheet" href="../shared/styles.css">
-  <link rel="stylesheet" href="../shared/enterprise.css">
+    <meta charset="UTF-8">
+    <title>Tableau de Bord - Manager</title>
+    <!-- Firebase Compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; margin: 0; background-color: #f4f7f6; }
+        .sidebar { width: 250px; background: #333; color: white; height: 100vh; padding: 20px; box-sizing: border-box; }
+        .sidebar h2 { margin-top: 0; color: #ffc107; }
+        .sidebar a { color: white; display: block; padding: 12px 0; text-decoration: none; border-bottom: 1px solid #444; }
+        .sidebar a:hover { color: #ffc107; }
+        .sidebar a.active { font-weight: bold; color: #ffc107; }
+        .content { flex: 1; padding: 30px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { padding: 15px; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background: #f8f9fa; font-weight: bold; }
+        button { padding: 8px 12px; margin-right: 5px; cursor: pointer; border: none; border-radius: 4px; color: white; font-weight: bold; }
+        .btn-start { background: #28a745; }
+        .btn-start:hover { background: #218838; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .status-offline { color: #6c757d; }
+        .status-online { color: #28a745; font-weight: bold; }
+        .status-break { color: #fd7e14; font-weight: bold; }
+    </style>
 </head>
-<body class="enterprise">
-  <div id="alertStrip" class="alert-strip">Des employés requièrent une action immédiate !</div>
-
-  <header class="topbar">
-    <div class="topbar-brand">
-      <img src="../shared/200.webp" alt="Logo" onerror="this.style.display='none'"> CSM - Pointages
-    </div>
-    <nav class="topbar-nav">
-      <a href="index.html" class="active">Pointages</a>
-      <a href="planning.html">Planning</a>
-      <a href="staff.html">Employés</a>
-      <a href="requests.html">Demandes</a>
-      <a href="daily-import.html">Importer</a>
+<body>
+    <nav class="sidebar">
+        <h2>CSM Manager</h2>
+        <ul>
+            <li><a href="index.html" class="active">Tableau de Bord</a></li>
+            <li><a href="staff.html">Employés</a></li>
+            <li><a href="planing.html">Planning (PDF)</a></li>
+            <li><a href="requests.html">Demandes</a></li>
+            <li><a href="daily-import.html">Import Journalier</a></li>
+            <li><a href="#" id="logout-btn" style="color: #ff6b6b; margin-top: 20px; border:none;">Déconnexion</a></li>
+        </ul>
     </nav>
-    <div class="flex items-center gap-4">
-      <div id="sysClock" class="topbar-clock time-font">00:00:00</div>
-      <button id="btnTheme" class="iconbtn">🌙</button>
-      <button id="btnLogout" class="btn btn-outline">Déconnexion</button>
-    </div>
-  </header>
 
-  <main class="main-content">
-    <div class="page-header">
-      <h2>Pointages du jour</h2>
-      <div class="flex gap-2">
-        <input type="text" id="searchInput" placeholder="Recherche..." style="width: 200px;">
-        <select id="filterSelect" class="btn btn-outline" style="padding: 0.625rem;">
-          <option value="action" selected>Action requise</option>
-          <option value="all">Tous</option>
-          <option value="working">En poste</option>
-          <option value="break">En pause</option>
-        </select>
-        <button id="btnAdd" class="btn btn-primary">+ Ajouter</button>
-      </div>
-    </div>
+    <main class="content">
+        <header>
+            <h1>Pointage en Direct</h1>
+            <p>Gérez les services et les pauses de votre équipe manuellement depuis ce panneau central.</p>
+        </header>
 
-    <div class="card">
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Badge</th>
-              <th>Nom</th>
-              <th>Entrée</th>
-              <th>Pause</th>
-              <th>Retour</th>
-              <th>Sortie</th>
-              <th>Heures Tot.</th>
-              <th>Statut</th>
-              <th>Actions</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </main>
+        <section>
+            <table id="staff-status-table">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Badge</th>
+                        <th>Statut actuel</th>
+                        <th>Actions de Pointage</th>
+                    </tr>
+                </thead>
+                <tbody id="staff-list-body">
+                    <tr><td colspan="4">Chargement de l'équipe...</td></tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
 
-  <!-- Edit Modal -->
-  <div id="editModal" class="modal-backdrop">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 id="modalTitle">Modifier pointage</h3>
-        <button class="iconbtn close-modal">×</button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="editId">
-        <div class="form-group">
-          <label>Badge</label>
-          <input type="text" id="editBadge" readonly>
-        </div>
-        <div class="form-group">
-          <label>Date (YYYY-MM-DD)</label>
-          <input type="text" id="editDate" readonly>
-        </div>
-        <div class="form-group">
-          <label>Nom</label>
-          <input type="text" id="editName" readonly>
-        </div>
-        <div class="form-group">
-          <label>Entrée (HH:MM)</label>
-          <input type="time" id="editIn">
-        </div>
-        <div class="form-group">
-          <label>Départ Pause (HH:MM)</label>
-          <input type="time" id="editBreakStart">
-        </div>
-        <div class="form-group">
-          <label>Retour Pause (HH:MM)</label>
-          <input type="time" id="editBreakReturn">
-        </div>
-        <div class="form-group">
-          <label>Sortie (HH:MM)</label>
-          <input type="time" id="editOut">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-danger-outline" id="btnDeleteShift">Supprimer</button>
-        <div style="flex-grow:1;"></div>
-        <button class="btn btn-outline close-modal">Annuler</button>
-        <button id="btnSaveEdit" class="btn btn-primary">Enregistrer</button>
-      </div>
-    </div>
-  </div>
+    <!-- Connect to your shared Firebase credentials -->
+    <script src="../shared/firebase.js"></script>
+    
+    <!-- Dashboard Logic -->
+    <script>
+        const db = firebase.firestore();
+        const RESTAURANT_ID = 'ketia';
 
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="../shared/firebase.js"></script>
-  <script src="../shared/rules-helpers.js"></script>
-  <script>
-    const themeBtn = document.getElementById('btnTheme');
-    let isDark = localStorage.getItem('csct_manager_theme') === 'dark';
-    const applyTheme = () => {
-      document.documentElement.className = isDark ? 'theme-dark' : 'theme-light';
-      themeBtn.innerText = isDark ? '☀️' : '🌙';
-      localStorage.setItem('csct_manager_theme', isDark ? 'dark' : 'light');
-    };
-    applyTheme();
-    themeBtn.onclick = () => { isDark = !isDark; applyTheme(); };
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verify manager is logged in
+            firebase.auth().onAuthStateChanged((user) => {
+                if (!user) {
+                    window.location.href = 'login.html';
+                } else {
+                    loadDashboard();
+                }
+            });
 
-    CSM.authReady.then(user => {
-      if(!user) { window.location.href = 'login.html'; return; }
-      Promise.race([CSM.ready, new Promise(r => setTimeout(() => r(false), 8000))]).then(ready => {
-        if(!ready) { window.auth.signOut(); window.location.href = 'login.html'; }
-      });
-    });
-
-    document.getElementById('btnLogout').onclick = () => window.auth.signOut().then(() => window.location.href = 'login.html');
-
-    setInterval(() => { document.getElementById('sysClock').innerText = new Date().toLocaleTimeString('fr-FR', { hour12: false }); }, 1000);
-
-    let shiftsData = [];
-    CSM.ready.then(() => {
-      CSM.refs.shifts().where("date", "==", CSMRules.todayKey())
-        .onSnapshot(snap => {
-          shiftsData = [];
-          snap.forEach(doc => shiftsData.push({ id: doc.id, ...doc.data() }));
-          renderTable();
+            // Logout
+            document.getElementById('logout-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                firebase.auth().signOut().then(() => {
+                    window.location.href = 'login.html';
+                });
+            });
         });
-      setInterval(renderTable, 60000);
-    });
 
-    const filterSelect = document.getElementById('filterSelect');
-    const searchInput = document.getElementById('searchInput');
-    filterSelect.onchange = renderTable;
-    searchInput.oninput = renderTable;
+        function loadDashboard() {
+            const staffRef = db.collection('restaurants').doc(RESTAURANT_ID).collection('staff');
+            const shiftsRef = db.collection('restaurants').doc(RESTAURANT_ID).collection('shifts');
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Get staff list, then listen for live shift changes
+            staffRef.onSnapshot(staffSnapshot => {
+                const staffList = [];
+                staffSnapshot.forEach(doc => staffList.push({ id: doc.id, ...doc.data() }));
 
-    function renderTable() {
-      const tbody = document.getElementById('tableBody');
-      const alertStrip = document.getElementById('alertStrip');
-      tbody.innerHTML = '';
-      let hasAlerts = false;
-      const today = CSMRules.todayKey();
-      const term = searchInput.value.toLowerCase();
+                shiftsRef.where('date', '==', today).onSnapshot(shiftsSnapshot => {
+                    const activeShifts = {};
+                    shiftsSnapshot.forEach(doc => {
+                        const shift = doc.data();
+                        // If shift isn't finished, record it as active
+                        if (!shift.endTime) {
+                            activeShifts[shift.badge] = { id: doc.id, ...shift };
+                        }
+                    });
 
-      let visible = shiftsData.map(s => CSMRules.shiftState(s, today));
-      
-      visible.forEach(s => {
-        if(s.status === 'crit' || s.status === 'breakover' || s.status === 'warn') hasAlerts = true;
-      });
-      alertStrip.classList.toggle('active', hasAlerts);
-
-      const filter = filterSelect.value;
-      if (filter === 'action') visible = visible.filter(s => ['warn','crit','breakover'].includes(s.status));
-      if (filter === 'working') visible = visible.filter(s => ['ok','warn','crit'].includes(s.status));
-      if (filter === 'break') visible = visible.filter(s => ['break','breakover'].includes(s.status));
-      
-      if (term) visible = visible.filter(s => s.name.toLowerCase().includes(term) || s.badge.includes(term));
-
-      visible.forEach(state => {
-        const tr = document.createElement('tr');
-        tr.className = `status-${state.status}`;
-        
-        let actionsHtml = '';
-        if (state.status === 'done') {
-          actionsHtml = `<span class="text-muted">Terminé</span>`;
-        } else if (state.breakStart == null) {
-          actionsHtml = `<button class="btn btn-warn" onclick="doAction('${state.id}', 'break')">Départ pause</button>
-                         <button class="btn btn-danger-outline" onclick="doAction('${state.id}', 'out')">Sortie</button>`;
-        } else if (state.breakReturn == null) {
-          actionsHtml = `<button class="btn btn-success" onclick="doAction('${state.id}', 'return', ${state.elapsedBreakMinutes})">Retour pause</button>
-                         <button class="btn btn-danger-outline" onclick="doAction('${state.id}', 'out')">Sortie</button>`;
-        } else {
-          actionsHtml = `<button class="btn btn-danger-outline" onclick="doAction('${state.id}', 'out')">Sortie</button>`;
+                    renderTable(staffList, activeShifts);
+                });
+            });
         }
 
-        tr.innerHTML = `
-          <td><strong>${state.badge}</strong></td>
-          <td>${state.name}</td>
-          <td class="time-font">${CSMRules.minToHM(state.clockIn) || '-'}</td>
-          <td class="time-font">${CSMRules.minToHM(state.breakStart) || '-'}</td>
-          <td class="time-font">${CSMRules.minToHM(state.breakReturn) || '-'}</td>
-          <td class="time-font">${CSMRules.minToHM(state.clockOut) || '-'}</td>
-          <td class="time-font"><strong>${CSMRules.fmtHrs(state.workedMinutes)}</strong></td>
-          <td><span class="pill pill-${state.status === 'breakover' ? 'crit' : state.status}">${state.statusLabel}</span></td>
-          <td class="flex gap-2">${actionsHtml}</td>
-          <td><button class="iconbtn" onclick="openEdit('${state.id}')">✎</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+        function renderTable(staffList, activeShifts) {
+            const tbody = document.getElementById('staff-list-body');
+            tbody.innerHTML = '';
 
-    window.doAction = async (id, actionType, elapsedBreak) => {
-      if(actionType === 'return' && elapsedBreak < 30) {
-        if(!confirm(`Attention, la pause n'a duré que ${Math.floor(elapsedBreak)} minutes (Minimum 30 min requises). Confirmer le retour ?`)) return;
-      }
-      const update = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-      const now = CSMRules.nowMinutes();
-      if(actionType === 'break') update.breakStart = now;
-      if(actionType === 'return') update.breakReturn = now;
-      if(actionType === 'out') { update.clockOut = now; update.status = 'closed'; }
-      await CSM.refs.shift(id).update(update);
-    };
+            if (staffList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">Aucun employé trouvé. Ajoutez-en via l\'onglet Employés.</td></tr>';
+                return;
+            }
 
-    // Modal Edit Logic
-    const editModal = document.getElementById('editModal');
-    document.querySelectorAll('.close-modal').forEach(b => b.onclick = () => editModal.classList.remove('active'));
+            staffList.forEach(staff => {
+                const shift = activeShifts[staff.id];
+                const tr = document.createElement('tr');
+                
+                let statusText = '<span class="status-offline">Hors ligne</span>';
+                let actionButtons = `<button onclick="startShift('${staff.id}', '${staff.name.replace(/'/g, "\\'")}')" class="btn-start">Début de service</button>`;
 
-    window.openEdit = (id) => {
-      const shift = shiftsData.find(s => s.id === id);
-      if(!shift) return;
-      document.getElementById('editId').value = shift.id;
-      document.getElementById('editBadge').value = shift.badge;
-      document.getElementById('editName').value = shift.name;
-      document.getElementById('editDate').value = shift.date;
-      document.getElementById('editIn').value = CSMRules.minToHM(shift.clockIn) || '';
-      document.getElementById('editBreakStart').value = CSMRules.minToHM(shift.breakStart) || '';
-      document.getElementById('editBreakReturn').value = CSMRules.minToHM(shift.breakReturn) || '';
-      document.getElementById('editOut').value = CSMRules.minToHM(shift.clockOut) || '';
-      document.getElementById('btnDeleteShift').style.display = 'block';
-      editModal.classList.add('active');
-    };
+                if (shift) {
+                    if (shift.breakStart && !shift.breakEnd) {
+                        statusText = '<span class="status-break">En Pause</span>';
+                        actionButtons = `<button onclick="endBreak('${shift.id}')" class="btn-warning">Retour de pause</button>`;
+                    } else {
+                        statusText = '<span class="status-online">En Service</span>';
+                        actionButtons = `
+                            <button onclick="startBreak('${shift.id}')" class="btn-warning">Départ Pause</button>
+                            <button onclick="endShift('${shift.id}')" class="btn-danger">Fin de service</button>
+                        `;
+                    }
+                }
 
-    document.getElementById('btnAdd').onclick = () => {
-      document.getElementById('editId').value = 'NEW';
-      document.getElementById('editBadge').value = '';
-      document.getElementById('editBadge').removeAttribute('readonly');
-      document.getElementById('editName').value = '';
-      document.getElementById('editName').removeAttribute('readonly');
-      document.getElementById('editDate').value = CSMRules.todayKey();
-      document.getElementById('editIn').value = '';
-      document.getElementById('editBreakStart').value = '';
-      document.getElementById('editBreakReturn').value = '';
-      document.getElementById('editOut').value = '';
-      document.getElementById('btnDeleteShift').style.display = 'none';
-      editModal.classList.add('active');
-    };
+                tr.innerHTML = `
+                    <td>${staff.name}</td>
+                    <td>${staff.id}</td>
+                    <td>${statusText}</td>
+                    <td>${actionButtons}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
 
-    document.getElementById('btnSaveEdit').onclick = async () => {
-      const id = document.getElementById('editId').value;
-      const update = {
-        badge: document.getElementById('editBadge').value,
-        name: document.getElementById('editName').value,
-        date: document.getElementById('editDate').value,
-        clockIn: CSMRules.hmToMin(document.getElementById('editIn').value),
-        breakStart: CSMRules.hmToMin(document.getElementById('editBreakStart').value),
-        breakReturn: CSMRules.hmToMin(document.getElementById('editBreakReturn').value),
-        clockOut: CSMRules.hmToMin(document.getElementById('editOut').value),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      
-      if(id === 'NEW') {
-        update.createdAt = update.updatedAt;
-        await CSM.refs.shifts().add(update);
-      } else {
-        await CSM.refs.shift(id).update(update);
-      }
-      editModal.classList.remove('active');
-    };
+        // Database action functions
+        window.startShift = function(badge, name) {
+            const now = new Date();
+            db.collection('restaurants').doc(RESTAURANT_ID).collection('shifts').add({
+                badge: badge,
+                name: name,
+                date: now.toISOString().split('T')[0],
+                startTime: now.toISOString(),
+                endTime: null,
+                breakStart: null,
+                breakEnd: null
+            });
+        };
 
-    document.getElementById('btnDeleteShift').onclick = async () => {
-      const id = document.getElementById('editId').value;
-      if(confirm("Supprimer ce pointage définitivement ?")) {
-        await CSM.refs.shift(id).delete();
-        editModal.classList.remove('active');
-      }
-    };
-  </script>
+        window.startBreak = function(shiftId) {
+            db.collection('restaurants').doc(RESTAURANT_ID).collection('shifts').doc(shiftId).update({
+                breakStart: new Date().toISOString()
+            });
+        };
+
+        window.endBreak = function(shiftId) {
+            db.collection('restaurants').doc(RESTAURANT_ID).collection('shifts').doc(shiftId).update({
+                breakEnd: new Date().toISOString()
+            });
+        };
+
+        window.endShift = function(shiftId) {
+            if(confirm("Confirmer la fin de service ?")) {
+                db.collection('restaurants').doc(RESTAURANT_ID).collection('shifts').doc(shiftId).update({
+                    endTime: new Date().toISOString()
+                });
+            }
+        };
+    </script>
 </body>
 </html>

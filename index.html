@@ -41,35 +41,8 @@
 
     <div id="toast-container"></div>
 
-    <!-- LOGIN VIEW -->
-    <div id="view-login" class="view-section active w-full h-full flex items-center justify-center bg-gray-50 absolute inset-0 z-50">
-        <div class="max-w-md w-full bg-white rounded-xl shadow-xl p-8 space-y-6">
-            <div class="text-center">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-mcd-dark mb-4">
-                    <i class="fa-solid fa-burger text-3xl text-mcd-gold"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-gray-900">Espace Manager</h2>
-                <p class="text-gray-500 mt-2">Contraintes Social Manager - ketia</p>
-            </div>
-            
-            <form id="login-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" id="login-email" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg outline-none" placeholder="manager@ketia.com">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Mot de passe</label>
-                    <input type="password" id="login-password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg outline-none" placeholder="••••••••">
-                </div>
-                <button type="submit" id="login-btn" class="w-full flex justify-center py-2.5 px-4 rounded-lg shadow-sm text-sm font-medium text-mcd-dark bg-mcd-gold hover:bg-mcd-goldhover transition-colors">
-                    <i class="fa-solid fa-right-to-bracket mr-2 mt-0.5"></i> Se connecter
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- APP SHELL -->
-    <div id="app-shell" class="hidden w-full h-full flex">
+    <!-- APP SHELL (Directly Visible) -->
+    <div id="app-shell" class="w-full h-full flex">
         <nav class="w-64 bg-mcd-dark text-white flex flex-col shadow-2xl z-10">
             <div class="h-20 flex items-center px-6 border-b border-gray-700">
                 <i class="fa-solid fa-burger text-2xl text-mcd-gold mr-3"></i>
@@ -86,15 +59,13 @@
             </div>
 
             <div class="p-4 border-t border-gray-700">
-                <button onclick="handleLogout()" class="w-full flex items-center justify-center px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-red-500/10 hover:text-red-400 text-sm font-medium">
-                    <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Déconnexion
-                </button>
+                <div class="text-xs text-gray-400 mb-2">Resto: <b class="text-white">KETIA</b></div>
             </div>
         </nav>
 
         <main class="flex-1 bg-mcd-light overflow-y-auto h-full flex flex-col">
             <!-- Dashboard View -->
-            <div id="view-dashboard" class="view-section p-8">
+            <div id="view-dashboard" class="view-section active p-8">
                 <div class="mb-8 flex justify-between items-end">
                     <div>
                         <h2 class="text-3xl font-bold text-gray-800">Pointage en Direct</h2>
@@ -163,8 +134,7 @@
     <!-- LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCQHH4QgqgYNu3tnGDP55Pne0neQskUvqE",
@@ -176,7 +146,6 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
         const db = getFirestore(app);
         const RESTAURANT_ID = 'ketia';
         let staffList = [];
@@ -199,48 +168,10 @@
             if (btn) { btn.classList.remove('text-gray-400'); btn.classList.add('bg-gray-800', 'text-mcd-gold'); }
         };
 
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const btn = document.getElementById('login-btn');
-            btn.disabled = true;
-            btn.innerText = "Connexion...";
-
-            try {
-                const cred = await signInWithEmailAndPassword(auth, email, password);
-                const snap = await getDoc(doc(db, 'managerRestaurants', cred.user.uid));
-                if (!snap.exists() || snap.data().restaurantId !== RESTAURANT_ID) {
-                    await signOut(auth);
-                    throw new Error("Accès refusé.");
-                }
-                showToast("Connexion réussie !");
-                setTimeout(() => window.location.reload(), 500);
-            } catch (err) {
-                showToast(err.message, "error");
-                btn.disabled = false;
-                btn.innerText = "Se connecter";
-            }
-        });
-
-        window.handleLogout = async () => { await signOut(auth); window.location.reload(); };
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    const snap = await getDoc(doc(db, 'managerRestaurants', user.uid));
-                    if (snap.exists() && snap.data().restaurantId === RESTAURANT_ID) {
-                        document.getElementById('view-login').classList.remove('active');
-                        document.getElementById('app-shell').classList.remove('hidden');
-                        navigate('dashboard');
-                        startListeners();
-                        setInterval(() => document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('fr-FR'), 1000);
-                    } else { await signOut(auth); }
-                } catch(e) { await signOut(auth); }
-            } else {
-                document.getElementById('app-shell').classList.add('hidden');
-                document.getElementById('view-login').classList.add('active');
-            }
+        // Initialize App Directly on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            startListeners();
+            setInterval(() => document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('fr-FR'), 1000);
         });
 
         function startListeners() {
@@ -264,7 +195,7 @@
 
         function renderDashboard() {
             const tbody = document.getElementById('dashboard-tbody');
-            tbody.innerHTML = staffList.length ? '' : '<tr><td colspan="4" class="p-6 text-center text-gray-500">Aucun employé.</td></tr>';
+            tbody.innerHTML = staffList.length ? '' : '<tr><td colspan="4" class="p-6 text-center text-gray-500">Aucun employé. Allez dans l\'onglet Employés pour en ajouter.</td></tr>';
             staffList.forEach(staff => {
                 const shift = activeShifts[staff.id];
                 const tr = document.createElement('tr');

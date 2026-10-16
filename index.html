@@ -336,20 +336,20 @@
 
     <!-- ==================== LOGIC SECTION ==================== -->
     <script type="module">
-        // Import Firebase v11.6.1 Modular SDK exactly as required
+        // Import Firebase v11.6.1 Modular SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // IMPORTANT: The user provided this exact Config for their new project
+        // Firebase Configuration
         const firebaseConfig = {
-		  apiKey: "AIzaSyCQHH4QgqgYNu3tnGDP55Pne0neQskUvqE",
-		  authDomain: "contractsocialmanager-v1.firebaseapp.com",
-		  projectId: "contractsocialmanager-v1",
-		  storageBucket: "contractsocialmanager-v1.firebasestorage.app",
-		  messagingSenderId: "990515772482",
-		  appId: "1:990515772482:web:8384d6427f315e2bddc1db"
-		};
+            apiKey: "AIzaSyCQHH4QgqgYNu3tnGDP55Pne0neQskUvqE",
+            authDomain: "contractsocialmanager-v1.firebaseapp.com",
+            projectId: "contractsocialmanager-v1",
+            storageBucket: "contractsocialmanager-v1.firebasestorage.app",
+            messagingSenderId: "990515772482",
+            appId: "1:990515772482:web:8384d6427f315e2bddc1db"
+        };
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -385,18 +385,14 @@
 
         // --- Navigation ---
         window.navigate = function(viewId) {
-            // Hide all views
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            // Remove active state from sidebar
             document.querySelectorAll('.nav-btn').forEach(el => {
                 el.classList.remove('bg-gray-800', 'text-mcd-gold');
                 el.classList.add('text-gray-400');
             });
             
-            // Show target view
             document.getElementById(`view-${viewId}`).classList.add('active');
             
-            // Highlight sidebar button if it exists
             const navBtn = document.getElementById(`nav-${viewId}`);
             if (navBtn) {
                 navBtn.classList.remove('text-gray-400');
@@ -404,42 +400,47 @@
             }
         };
 
-        // --- Auth Logic ---
+        // --- Auth Logic (Fixed Modular Implementation) ---
         document.getElementById('login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    const btn = document.getElementById('login-btn');
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const btn = document.getElementById('login-btn');
 
-    btn.disabled = true;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = `Connexion en cours...`;
+            btn.disabled = true;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Connexion...`;
 
-    try {
-        // 1. Authenticate with Firebase Auth
-        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-        const user = userCredential.user;
+            try {
+                // 1. Authenticate with Firebase Auth Modular SDK
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
 
-        // 2. Check manager permissions in Firestore
-        const docRef = await firebase.firestore().collection('managerRestaurants').doc(user.uid).get();
-        
-        if (!docRef.exists) {
-            throw new Error("Accès refusé. Vous n'êtes pas assigné à ce restaurant.");
-        }
+                // 2. Check manager permissions in Firestore Modular SDK
+                const docRef = doc(db, 'managerRestaurants', user.uid);
+                const docSnap = await getDoc(docRef);
+                
+                if (!docSnap.exists()) {
+                    await signOut(auth);
+                    throw new Error("Accès refusé. Vous n'êtes pas assigné à ce restaurant.");
+                }
 
-        const restaurantId = docRef.data().restaurantId;
-        localStorage.setItem('csm_restaurantId', restaurantId);
+                const restaurantId = docSnap.data().restaurantId;
+                if (restaurantId !== RESTAURANT_ID) {
+                    await signOut(auth);
+                    throw new Error("Accès refusé pour ce restaurant.");
+                }
 
-        // Success: Reload to show dashboard
-        window.location.reload();
+                localStorage.setItem('csm_restaurantId', restaurantId);
+                showToast("Connexion réussie");
 
-    } catch (error) {
-        console.error("Login error:", error);
-        alert("Erreur de connexion: " + error.message);
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-    }
-});
+            } catch (error) {
+                console.error("Login error:", error);
+                showToast(error.message || "Erreur de connexion", "error");
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
 
         window.handleLogout = async function() {
             try {
@@ -453,7 +454,6 @@
         // Listen for Auth State Changes
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Verify they are a manager for KETIA
                 try {
                     const managerDoc = await getDoc(doc(db, 'managerRestaurants', user.uid));
                     if (managerDoc.exists() && managerDoc.data().restaurantId === RESTAURANT_ID) {
@@ -463,17 +463,13 @@
                         navigate('dashboard');
                         startDataListeners();
                         startClock();
-                        showToast("Connexion réussie");
                     } else {
                         await signOut(auth);
-                        showToast("Accès refusé. Vous n'êtes pas assigné à ce restaurant.", "error");
                     }
                 } catch (e) {
-                    showToast("Erreur de vérification des permissions", "error");
                     await signOut(auth);
                 }
             } else {
-                // Logged out
                 document.getElementById('app-shell').classList.add('hidden');
                 document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
                 document.getElementById('view-login').classList.add('active');
@@ -494,30 +490,22 @@
             if(liveTimerInterval) clearInterval(liveTimerInterval);
         }
         function updateClocks() {
-            // Top clock
             const now = new Date();
             document.getElementById('live-clock').innerText = now.toLocaleTimeString('fr-FR');
-            
-            // Update continuous time in dashboard
             updateContinuousTimers();
         }
 
         function calculateContinuousTime(shift) {
             if (!shift) return null;
-            
             const now = new Date();
             let start = new Date(shift.startTime);
             
-            // If on break, the continuous time is frozen at the moment break started
             if (shift.breakStart && !shift.breakEnd) {
                 return { ms: new Date(shift.breakStart) - start, active: false };
             }
-            
-            // If returned from break, count resets from breakEnd in Moroccan labor law context for this specific app
             if (shift.breakEnd) {
                 start = new Date(shift.breakEnd);
             }
-            
             return { ms: now - start, active: true };
         }
 
@@ -530,7 +518,6 @@
 
         function updateContinuousTimers() {
             let alertsCount = 0;
-            
             staffList.forEach(staff => {
                 const shift = activeShifts[staff.id];
                 const timeCell = document.getElementById(`time-${staff.id}`);
@@ -538,33 +525,24 @@
                 if (shift && timeCell) {
                     const timeData = calculateContinuousTime(shift);
                     const formatted = formatDuration(timeData.ms);
-                    
                     const totalMins = Math.floor(timeData.ms / 60000);
-                    
-                    let badgeClass = "bg-gray-100 text-gray-600"; // default
+                    let badgeClass = "bg-gray-100 text-gray-600";
                     
                     if (timeData.active) {
-                        if (totalMins >= 290) { // 4h50 = Danger
+                        if (totalMins >= 290) { // 4h50
                             badgeClass = "bg-red-100 text-red-700 border border-red-200 animate-pulse";
                             alertsCount++;
-                        } else if (totalMins >= 270) { // 4h30 = Warning
+                        } else if (totalMins >= 270) { // 4h30
                             badgeClass = "bg-yellow-100 text-yellow-700 border border-yellow-200";
                             alertsCount++;
                         } else {
                             badgeClass = "bg-green-50 text-green-700 border border-green-200";
                         }
                     }
-
                     timeCell.innerHTML = `<span class="px-2.5 py-1 rounded-md text-xs font-semibold ${badgeClass}">${formatted}</span>`;
                 }
             });
-            
             document.getElementById('stat-alerts').innerText = alertsCount;
-            if(alertsCount > 0) {
-                document.getElementById('stat-alerts').classList.add('text-red-600');
-            } else {
-                document.getElementById('stat-alerts').classList.remove('text-red-600');
-            }
         }
 
         // --- Realtime Data Listeners ---
@@ -593,7 +571,6 @@
                     const shift = doc.data();
                     if (!shift.endTime) {
                         activeShifts[shift.badge] = { id: doc.id, ...shift };
-                        
                         if (shift.breakStart && !shift.breakEnd) {
                             onbreak++;
                         } else {
@@ -633,15 +610,11 @@
                 let actionsHtml = `<button onclick="actionStartShift('${staff.id}', '${staff.name.replace(/'/g, "\\'")}')" class="bg-mcd-dark hover:bg-black text-white px-3 py-1.5 rounded text-xs font-medium transition-colors">Démarrer</button>`;
 
                 if (shift) {
-                    // Ongoing Shift
                     timeHtml = `<div id="time-${staff.id}">--:--</div>`;
-
                     if (shift.breakStart && !shift.breakEnd) {
-                        // On Break
                         statusHtml = '<div class="flex items-center text-yellow-600 font-medium"><span class="status-dot dot-break"></span> En Pause</div>';
                         actionsHtml = `<button onclick="actionEndBreak('${shift.id}')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors shadow-sm">Retour Pause</button>`;
                     } else {
-                        // Working
                         statusHtml = '<div class="flex items-center text-green-600 font-medium"><span class="status-dot dot-online"></span> En Service</div>';
                         actionsHtml = `
                             <div class="flex justify-end space-x-2">
@@ -747,7 +720,6 @@
             document.getElementById('staff-mode').value = 'add';
             document.getElementById('staff-badge').disabled = false;
             document.getElementById('modal-title').innerText = 'Ajouter un Employé';
-            
             staffModal.classList.remove('hidden');
             setTimeout(() => staffModalContent.classList.remove('scale-95'), 10);
         };
@@ -761,10 +733,9 @@
             document.getElementById('staff-mode').value = 'edit';
             document.getElementById('staff-original-badge').value = badge;
             document.getElementById('staff-badge').value = badge;
-            document.getElementById('staff-badge').disabled = true; // Cannot edit ID
+            document.getElementById('staff-badge').disabled = true;
             document.getElementById('staff-name').value = name;
             document.getElementById('modal-title').innerText = 'Modifier l\'Employé';
-            
             staffModal.classList.remove('hidden');
             setTimeout(() => staffModalContent.classList.remove('scale-95'), 10);
         };
@@ -779,7 +750,6 @@
 
             try {
                 if (mode === 'add') {
-                    // Check if exists
                     const docSnap = await getDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge));
                     if(docSnap.exists()) {
                         showToast("Ce numéro de badge existe déjà", "error");
@@ -827,11 +797,9 @@
             });
         };
 
-        // --- Testing function ---
         window.testNotification = function() {
             showToast("Test d'alerte déclenché avec succès", "warning");
         }
-
     </script>
 </body>
 </html>

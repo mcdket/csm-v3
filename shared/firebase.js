@@ -1,12 +1,12 @@
 window.CSM = (function() {
   const firebaseConfig = {
-    apiKey: "AIzaSyB_uy_D_AP4-zRyqfuzk8BADDAfgVQ4ZQw",
-    authDomain: "contractsocialmanager.firebaseapp.com",
-    projectId: "contractsocialmanager",
-    storageBucket: "contractsocialmanager.firebasestorage.app",
-    messagingSenderId: "887068908069",
-    appId: "1:887068908069:web:d5a039e90add6c2c45fdcc"
-  };
+  apiKey: "AIzaSyCQHH4QgqgYNu3tnGDP55Pne0neQskUvqE",
+  authDomain: "contractsocialmanager-v1.firebaseapp.com",
+  projectId: "contractsocialmanager-v1",
+  storageBucket: "contractsocialmanager-v1.firebasestorage.app",
+  messagingSenderId: "990515772482",
+  appId: "1:990515772482:web:8384d6427f315e2bddc1db"
+};
 
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);

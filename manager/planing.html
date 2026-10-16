@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr" class="theme-light">
+<head>
+  <meta charset="UTF-8">
+  <title>Planning - CSM</title>
+  <link rel="stylesheet" href="../shared/styles.css">
+  <link rel="stylesheet" href="../shared/enterprise.css">
+</head>
+<body class="enterprise">
+  <header class="topbar">
+    <div class="topbar-brand"><img src="../shared/200.webp" alt="Logo" onerror="this.style.display='none'"> CSM - Planning</div>
+    <nav class="topbar-nav">
+      <a href="index.html">Pointages</a>
+      <a href="planning.html" class="active">Planning</a>
+      <a href="staff.html">Employés</a>
+      <a href="requests.html">Demandes</a>
+      <a href="daily-import.html">Importer</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <button id="btnTheme" class="iconbtn">🌙</button>
+      <button id="btnLogout" class="btn btn-outline">Déconnexion</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h2>Planning de la semaine en cours</h2>
+      <button class="btn btn-primary" onclick="alert('Module Import PDF Hebdomadaire (À implémenter)')">Importer PDF</button>
+    </div>
+
+    <div class="card p-4">
+      <div id="tabs" class="flex gap-4 mb-4" style="border-bottom: 1px solid var(--line);">
+        <!-- Tabs generated dynamically -->
+      </div>
+      
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Début</th>
+              <th>Fin</th>
+              <th>Employé</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="planningBody">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Replace Modal -->
+  <div id="replaceModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Modifier statut / Remplacer</h3>
+        <button class="iconbtn close-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <select id="statusSelect" class="form-group">
+          <option value="ok">Normal</option>
+          <option value="absent">Absent</option>
+          <option value="maladie">Maladie</option>
+          <option value="annule">Annulé</option>
+          <option value="remplace">Remplacé par...</option>
+        </select>
+        <div id="replacementGroup" class="form-group hidden">
+          <label>Nom du remplaçant</label>
+          <input type="text" id="replacementName" placeholder="Saisir le nom...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline close-modal">Annuler</button>
+        <button id="btnSaveStatus" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="../shared/firebase.js"></script>
+  <script>
+    const themeBtn = document.getElementById('btnTheme');
+    let isDark = localStorage.getItem('csct_manager_theme') === 'dark';
+    const applyTheme = () => { document.documentElement.className = isDark ? 'theme-dark' : 'theme-light'; themeBtn.innerText = isDark ? '☀️' : '🌙'; localStorage.setItem('csct_manager_theme', isDark ? 'dark' : 'light'); };
+    applyTheme(); themeBtn.onclick = () => { isDark = !isDark; applyTheme(); };
+    CSM.authReady.then(u => { if(!u) window.location.href='login.html'; });
+    document.getElementById('btnLogout').onclick = () => window.auth.signOut().then(() => window.location.href='login.html');
+
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    let selectedDayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+    let scheduleDocId = null;
+    let currentEmployees = []; 
+
+    // Generate tabs
+    const tabsContainer = document.getElementById('tabs');
+    days.forEach((day, index) => {
+      const btn = document.createElement('button');
+      btn.className = `btn ${index === selectedDayIndex ? 'btn-outline' : ''}`;
+      btn.style.borderBottom = index === selectedDayIndex ? '2px solid var(--accent)' : 'none';
+      btn.innerText = day;
+      btn.onclick = () => { selectedDayIndex = index; updateTabs(); renderSchedule(); };
+      tabsContainer.appendChild(btn);
+    });
+
+    function updateTabs() {
+      Array.from(tabsContainer.children).forEach((btn, index) => {
+        btn.className = `btn ${index === selectedDayIndex ? 'btn-outline' : ''}`;
+        btn.style.borderBottom = index === selectedDayIndex ? '2px solid var(--accent)' : 'none';
+      });
+    }
+
+    CSM.ready.then(() => {
+      CSM.refs.schedules().orderBy('importedAt', 'desc').limit(1).onSnapshot(snap => {
+        if (!snap.empty) {
+          const doc = snap.docs[0];
+          scheduleDocId = doc.id;
+          currentEmployees = doc.data().employees || [];
+          renderSchedule();
+        } else {
+          document.getElementById('planningBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun planning importé.</td></tr>';
+        }
+      });
+    });
+
+    function renderSchedule() {
+      const tbody = document.getElementById('planningBody');
+      tbody.innerHTML = '';
+      if(!currentEmployees.length) return;
+      
+      const shiftsForDay = [];
+      currentEmployees.forEach((emp, empIndex) => {
+        const dayData = emp.d && emp.d[selectedDayIndex];
+        if (dayData && dayData.s && dayData.e) {
+          shiftsForDay.push({ empIndex, badge: emp.n, name: emp.name, ...dayData });
+        }
+      });
+
+      shiftsForDay.sort((a, b) => a.s.localeCompare(b.s));
+
+      shiftsForDay.forEach(shift => {
+        const tr = document.createElement('tr');
+        
+        let statusBadge = '';
+        if (shift.st === 'absent') statusBadge = '<span class="pill pill-neutral">Absent</span>';
+        if (shift.st === 'maladie') statusBadge = '<span class="pill pill-warn">Maladie</span>';
+        if (shift.st === 'annule') statusBadge = '<span class="pill pill-crit">Annulé</span>';
+        if (shift.st === 'remplace') statusBadge = `<span class="pill" style="background:#E9D5FF;color:#6B21A8;">← Remplacé par ${shift.rName}</span>`;
+
+        tr.innerHTML = `
+          <td class="time-font">${shift.s}</td>
+          <td class="time-font">${shift.e}</td>
+          <td style="${shift.st === 'absent' || shift.st === 'annule' ? 'text-decoration:line-through;color:var(--text-muted);' : ''}">${shift.name}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <button class="iconbtn" onclick="openStatusModal(${shift.empIndex}, '${shift.st || 'ok'}', '${shift.rName || ''}')">⊘</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    let editEmpIndex = null;
+    const modal = document.getElementById('replaceModal');
+    const statusSelect = document.getElementById('statusSelect');
+    const replacementGroup = document.getElementById('replacementGroup');
+
+    window.openStatusModal = (empIndex, st, rName) => {
+      editEmpIndex = empIndex;
+      statusSelect.value = st;
+      document.getElementById('replacementName').value = rName;
+      replacementGroup.classList.toggle('hidden', st !== 'remplace');
+      modal.classList.add('active');
+    };
+
+    statusSelect.onchange = (e) => {
+      replacementGroup.classList.toggle('hidden', e.target.value !== 'remplace');
+    };
+
+    document.getElementById('btnSaveStatus').onclick = async () => {
+      const newEmployees = JSON.parse(JSON.stringify(currentEmployees)); 
+      const st = statusSelect.value;
+      
+      newEmployees[editEmpIndex].d[selectedDayIndex].st = st === 'ok' ? null : st;
+      if (st === 'remplace') {
+        newEmployees[editEmpIndex].d[selectedDayIndex].rName = document.getElementById('replacementName').value.trim();
+      } else {
+        newEmployees[editEmpIndex].d[selectedDayIndex].rName = null;
+      }
+
+      await CSM.refs.schedules().doc(scheduleDocId).update({ employees: newEmployees });
+      modal.classList.remove('active');
+    };
+
+    document.querySelectorAll('.close-modal').forEach(b => b.onclick = () => modal.classList.remove('active'));
+  </script>
+</body>
+</html>

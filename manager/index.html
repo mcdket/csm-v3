@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr" class="theme-light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pointages - Contract Social Manager</title>
+  <link rel="icon" href="../shared/200.webp" type="image/webp">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <link rel="stylesheet" href="../shared/enterprise.css">
+</head>
+<body class="enterprise">
+  <div id="alertStrip" class="alert-strip">Des employés requièrent une action immédiate !</div>
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <img src="../shared/200.webp" alt="Logo" onerror="this.style.display='none'"> CSM - Pointages
+    </div>
+    <nav class="topbar-nav">
+      <a href="index.html" class="active">Pointages</a>
+      <a href="planning.html">Planning</a>
+      <a href="staff.html">Employés</a>
+      <a href="requests.html">Demandes</a>
+      <a href="daily-import.html">Importer</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <div id="sysClock" class="topbar-clock time-font">00:00:00</div>
+      <button id="btnTheme" class="iconbtn">🌙</button>
+      <button id="btnLogout" class="btn btn-outline">Déconnexion</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h2>Pointages du jour</h2>
+      <div class="flex gap-2">
+        <input type="text" id="searchInput" placeholder="Recherche..." style="width: 200px;">
+        <select id="filterSelect" class="btn btn-outline" style="padding: 0.625rem;">
+          <option value="action" selected>Action requise</option>
+          <option value="all">Tous</option>
+          <option value="working">En poste</option>
+          <option value="break">En pause</option>
+        </select>
+        <button id="btnAdd" class="btn btn-primary">+ Ajouter</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Badge</th>
+              <th>Nom</th>
+              <th>Entrée</th>
+              <th>Pause</th>
+              <th>Retour</th>
+              <th>Sortie</th>
+              <th>Heures Tot.</th>
+              <th>Statut</th>
+              <th>Actions</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Modifier pointage</h3>
+        <button class="iconbtn close-modal">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editId">
+        <div class="form-group">
+          <label>Badge</label>
+          <input type="text" id="editBadge" readonly>
+        </div>
+        <div class="form-group">
+          <label>Date (YYYY-MM-DD)</label>
+          <input type="text" id="editDate" readonly>
+        </div>
+        <div class="form-group">
+          <label>Nom</label>
+          <input type="text" id="editName" readonly>
+        </div>
+        <div class="form-group">
+          <label>Entrée (HH:MM)</label>
+          <input type="time" id="editIn">
+        </div>
+        <div class="form-group">
+          <label>Départ Pause (HH:MM)</label>
+          <input type="time" id="editBreakStart">
+        </div>
+        <div class="form-group">
+          <label>Retour Pause (HH:MM)</label>
+          <input type="time" id="editBreakReturn">
+        </div>
+        <div class="form-group">
+          <label>Sortie (HH:MM)</label>
+          <input type="time" id="editOut">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger-outline" id="btnDeleteShift">Supprimer</button>
+        <div style="flex-grow:1;"></div>
+        <button class="btn btn-outline close-modal">Annuler</button>
+        <button id="btnSaveEdit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="../shared/firebase.js"></script>
+  <script src="../shared/rules-helpers.js"></script>
+  <script>
+    const themeBtn = document.getElementById('btnTheme');
+    let isDark = localStorage.getItem('csct_manager_theme') === 'dark';
+    const applyTheme = () => {
+      document.documentElement.className = isDark ? 'theme-dark' : 'theme-light';
+      themeBtn.innerText = isDark ? '☀️' : '🌙';
+      localStorage.setItem('csct_manager_theme', isDark ? 'dark' : 'light');
+    };
+    applyTheme();
+    themeBtn.onclick = () => { isDark = !isDark; applyTheme(); };
+
+    CSM.authReady.then(user => {
+      if(!user) { window.location.href = 'login.html'; return; }
+      Promise.race([CSM.ready, new Promise(r => setTimeout(() => r(false), 8000))]).then(ready => {
+        if(!ready) { window.auth.signOut(); window.location.href = 'login.html'; }
+      });
+    });
+
+    document.getElementById('btnLogout').onclick = () => window.auth.signOut().then(() => window.location.href = 'login.html');
+
+    setInterval(() => { document.getElementById('sysClock').innerText = new Date().toLocaleTimeString('fr-FR', { hour12: false }); }, 1000);
+
+    let shiftsData = [];
+    CSM.ready.then(() => {
+      CSM.refs.shifts().where("date", "==", CSMRules.todayKey())
+        .onSnapshot(snap => {
+          shiftsData = [];
+          snap.forEach(doc => shiftsData.push({ id: doc.id, ...doc.data() }));
+          renderTable();
+        });
+      setInterval(renderTable, 60000);
+    });
+
+    const filterSelect = document.getElementById('filterSelect');
+    const searchInput = document.getElementById('searchInput');
+    filterSelect.onchange = renderTable;
+    searchInput.oninput = renderTable;
+
+    function renderTable() {
+      const tbody = document.getElementById('tableBody');
+      const alertStrip = document.getElementById('alertStrip');
+      tbody.innerHTML = '';
+      let hasAlerts = false;
+      const today = CSMRules.todayKey();
+      const term = searchInput.value.toLowerCase();
+
+      let visible = shiftsData.map(s => CSMRules.shiftState(s, today));
+      
+      visible.forEach(s => {
+        if(s.status === 'crit' || s.status === 'breakover' || s.status === 'warn') hasAlerts = true;
+      });
+      alertStrip.classList.toggle('active', hasAlerts);
+
+      const filter = filterSelect.value;
+      if (filter === 'action') visible = visible.filter(s => ['warn','crit','breakover'].includes(s.status));
+      if (filter === 'working') visible = visible.filter(s => ['ok','warn','crit'].includes(s.status));
+      if (filter === 'break') visible = visible.filter(s => ['break','breakover'].includes(s.status));
+      
+      if (term) visible = visible.filter(s => s.name.toLowerCase().includes(term) || s.badge.includes(term));
+
+      visible.forEach(state => {
+        const tr = document.createElement('tr');
+        tr.className = `status-${state.status}`;
+        
+        let actionsHtml = '';
+        if (state.status === 'done') {
+          actionsHtml = `<span class="text-muted">Terminé</span>`;
+        } else if (state.breakStart == null) {
+          actionsHtml = `<button class="btn btn-warn" onclick="doAction('${state.id}', 'break')">Départ pause</button>
+                         <button class="btn btn-danger-outline" onclick="doAction('${state.id}', 'out')">Sortie</button>`;
+        } else if (state.breakReturn == null) {
+          actionsHtml = `<button class="btn btn-success" onclick="doAction('${state.id}', 'return', ${state.elapsedBreakMinutes})">Retour pause</button>
+                         <button class="btn btn-danger-outline" onclick="doAction('${state.id}', 'out')">Sortie</button>`;
+        } else {
+          actionsHtml = `<button class="btn btn-danger-outline" onclick="doAction('${state.id}', 'out')">Sortie</button>`;
+        }
+
+        tr.innerHTML = `
+          <td><strong>${state.badge}</strong></td>
+          <td>${state.name}</td>
+          <td class="time-font">${CSMRules.minToHM(state.clockIn) || '-'}</td>
+          <td class="time-font">${CSMRules.minToHM(state.breakStart) || '-'}</td>
+          <td class="time-font">${CSMRules.minToHM(state.breakReturn) || '-'}</td>
+          <td class="time-font">${CSMRules.minToHM(state.clockOut) || '-'}</td>
+          <td class="time-font"><strong>${CSMRules.fmtHrs(state.workedMinutes)}</strong></td>
+          <td><span class="pill pill-${state.status === 'breakover' ? 'crit' : state.status}">${state.statusLabel}</span></td>
+          <td class="flex gap-2">${actionsHtml}</td>
+          <td><button class="iconbtn" onclick="openEdit('${state.id}')">✎</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.doAction = async (id, actionType, elapsedBreak) => {
+      if(actionType === 'return' && elapsedBreak < 30) {
+        if(!confirm(`Attention, la pause n'a duré que ${Math.floor(elapsedBreak)} minutes (Minimum 30 min requises). Confirmer le retour ?`)) return;
+      }
+      const update = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+      const now = CSMRules.nowMinutes();
+      if(actionType === 'break') update.breakStart = now;
+      if(actionType === 'return') update.breakReturn = now;
+      if(actionType === 'out') { update.clockOut = now; update.status = 'closed'; }
+      await CSM.refs.shift(id).update(update);
+    };
+
+    // Modal Edit Logic
+    const editModal = document.getElementById('editModal');
+    document.querySelectorAll('.close-modal').forEach(b => b.onclick = () => editModal.classList.remove('active'));
+
+    window.openEdit = (id) => {
+      const shift = shiftsData.find(s => s.id === id);
+      if(!shift) return;
+      document.getElementById('editId').value = shift.id;
+      document.getElementById('editBadge').value = shift.badge;
+      document.getElementById('editName').value = shift.name;
+      document.getElementById('editDate').value = shift.date;
+      document.getElementById('editIn').value = CSMRules.minToHM(shift.clockIn) || '';
+      document.getElementById('editBreakStart').value = CSMRules.minToHM(shift.breakStart) || '';
+      document.getElementById('editBreakReturn').value = CSMRules.minToHM(shift.breakReturn) || '';
+      document.getElementById('editOut').value = CSMRules.minToHM(shift.clockOut) || '';
+      document.getElementById('btnDeleteShift').style.display = 'block';
+      editModal.classList.add('active');
+    };
+
+    document.getElementById('btnAdd').onclick = () => {
+      document.getElementById('editId').value = 'NEW';
+      document.getElementById('editBadge').value = '';
+      document.getElementById('editBadge').removeAttribute('readonly');
+      document.getElementById('editName').value = '';
+      document.getElementById('editName').removeAttribute('readonly');
+      document.getElementById('editDate').value = CSMRules.todayKey();
+      document.getElementById('editIn').value = '';
+      document.getElementById('editBreakStart').value = '';
+      document.getElementById('editBreakReturn').value = '';
+      document.getElementById('editOut').value = '';
+      document.getElementById('btnDeleteShift').style.display = 'none';
+      editModal.classList.add('active');
+    };
+
+    document.getElementById('btnSaveEdit').onclick = async () => {
+      const id = document.getElementById('editId').value;
+      const update = {
+        badge: document.getElementById('editBadge').value,
+        name: document.getElementById('editName').value,
+        date: document.getElementById('editDate').value,
+        clockIn: CSMRules.hmToMin(document.getElementById('editIn').value),
+        breakStart: CSMRules.hmToMin(document.getElementById('editBreakStart').value),
+        breakReturn: CSMRules.hmToMin(document.getElementById('editBreakReturn').value),
+        clockOut: CSMRules.hmToMin(document.getElementById('editOut').value),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      if(id === 'NEW') {
+        update.createdAt = update.updatedAt;
+        await CSM.refs.shifts().add(update);
+      } else {
+        await CSM.refs.shift(id).update(update);
+      }
+      editModal.classList.remove('active');
+    };
+
+    document.getElementById('btnDeleteShift').onclick = async () => {
+      const id = document.getElementById('editId').value;
+      if(confirm("Supprimer ce pointage définitivement ?")) {
+        await CSM.refs.shift(id).delete();
+        editModal.classList.remove('active');
+      }
+    };
+  </script>
+</body>
+</html>

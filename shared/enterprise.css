@@ -1,0 +1,13 @@
+body.enterprise { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+.topbar { height: 60px; background-color: var(--panel); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; flex-shrink: 0; }
+.topbar-brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1.125rem; }
+.topbar-brand img { width: 32px; height: 32px; border-radius: 50%; }
+.topbar-clock { font-family: 'IBM Plex Mono', monospace; font-size: 1.25rem; font-weight: 600; color: var(--text); }
+.topbar-nav { display: flex; align-items: center; gap: 1.5rem; }
+.topbar-nav a { color: var(--text-muted); font-weight: 500; padding: 0.5rem 0; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.topbar-nav a:hover, .topbar-nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+.nav-badge { background-color: var(--status-crit-line); color: white; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 999px; margin-left: 0.25rem; vertical-align: super; }
+.main-content { flex: 1; overflow-y: auto; padding: 2rem; background-color: var(--bg); }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.iconbtn { background: transparent; border: none; color: var(--text-muted); font-size: 1.25rem; cursor: pointer; border-radius: 50%; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+.iconbtn:hover { background-color: var(--line-soft); color: var(--text); }

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr" class="theme-light">
+<head>
+  <meta charset="UTF-8">
+  <title>Demandes - CSM</title>
+  <link rel="stylesheet" href="../shared/styles.css">
+  <link rel="stylesheet" href="../shared/enterprise.css">
+</head>
+<body class="enterprise">
+  <header class="topbar">
+    <div class="topbar-brand"><img src="../shared/200.webp" alt="Logo" onerror="this.style.display='none'"> CSM - Demandes</div>
+    <nav class="topbar-nav">
+      <a href="index.html">Pointages</a>
+      <a href="planning.html">Planning</a>
+      <a href="staff.html">Employés</a>
+      <a href="requests.html" class="active">Demandes</a>
+      <a href="daily-import.html">Importer</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <button id="btnTheme" class="iconbtn">🌙</button>
+      <button id="btnLogout" class="btn btn-outline">Déconnexion</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h2>Demandes & Corrections</h2>
+      <select id="filterSelect" class="btn btn-outline">
+        <option value="pending" selected>En attente</option>
+        <option value="all">Toutes</option>
+      </select>
+    </div>
+
+    <div class="flex gap-4 mb-4" style="border-bottom: 1px solid var(--line);">
+      <button id="tabCorrections" class="btn btn-outline" style="border-bottom: 2px solid var(--accent);">Corrections</button>
+      <button id="tabLeaves" class="btn">Congés & Absences</button>
+    </div>
+
+    <div id="requestsContainer" style="display: grid; gap: 1rem;">
+      <!-- Populated by JS -->
+    </div>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="../shared/firebase.js"></script>
+  <script src="../shared/rules-helpers.js"></script>
+  <script>
+    const themeBtn = document.getElementById('btnTheme');
+    let isDark = localStorage.getItem('csct_manager_theme') === 'dark';
+    const applyTheme = () => { document.documentElement.className = isDark ? 'theme-dark' : 'theme-light'; themeBtn.innerText = isDark ? '☀️' : '🌙'; localStorage.setItem('csct_manager_theme', isDark ? 'dark' : 'light'); };
+    applyTheme(); themeBtn.onclick = () => { isDark = !isDark; applyTheme(); };
+    CSM.authReady.then(u => { if(!u) window.location.href='login.html'; });
+    document.getElementById('btnLogout').onclick = () => window.auth.signOut().then(() => window.location.href='login.html');
+
+    let currentTab = 'corrections'; // or 'leaves'
+    let reqsData = [];
+
+    const tabCorrections = document.getElementById('tabCorrections');
+    const tabLeaves = document.getElementById('tabLeaves');
+    const filterSelect = document.getElementById('filterSelect');
+
+    tabCorrections.onclick = () => { currentTab = 'corrections'; tabCorrections.className='btn btn-outline'; tabCorrections.style.borderBottom='2px solid var(--accent)'; tabLeaves.className='btn'; tabLeaves.style.borderBottom='none'; loadData(); };
+    tabLeaves.onclick = () => { currentTab = 'leaves'; tabLeaves.className='btn btn-outline'; tabLeaves.style.borderBottom='2px solid var(--accent)'; tabCorrections.className='btn'; tabCorrections.style.borderBottom='none'; loadData(); };
+    filterSelect.onchange = renderData;
+
+    function loadData() {
+      CSM.ready.then(() => {
+        const coll = currentTab === 'corrections' ? CSM.refs.corrections() : CSM.refs.leaveReqs();
+        coll.orderBy('requestedAt', 'desc').onSnapshot(snap => {
+          reqsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          renderData();
+        });
+      });
+    }
+
+    function renderData() {
+      const container = document.getElementById('requestsContainer');
+      container.innerHTML = '';
+      const filter = filterSelect.value;
+      
+      const visible = reqsData.filter(r => {
+        if (filter === 'pending' && r.status !== 'pending') return false;
+        return true;
+      });
+
+      if (visible.length === 0) {
+        container.innerHTML = '<div class="card p-4 text-center text-muted">Aucune demande trouvée.</div>';
+        return;
+      }
+
+      visible.forEach(req => {
+        const card = document.createElement('div');
+        card.className = 'card p-4 flex justify-between items-center';
+        
+        let statusBadge = '';
+        if (req.status === 'pending') statusBadge = '<span class="pill pill-warn">En attente</span>';
+        if (req.status === 'approved') statusBadge = '<span class="pill pill-ok">Approuvé</span>';
+        if (req.status === 'rejected') statusBadge = '<span class="pill pill-crit">Refusé</span>';
+
+        let content = '';
+        if (currentTab === 'corrections') {
+          content = `
+            <div>
+              <h4>${req.name} (Badge: ${req.badge})</h4>
+              <p class="text-muted">Date: ${req.date} | Champ: <strong>${req.field}</strong></p>
+              <p>Nouvelle valeur demandée: <strong>${CSMRules.minToHM(req.requestedValue) || 'Vide'}</strong></p>
+              <p class="text-muted">Raison: ${req.reason}</p>
+            </div>
+          `;
+        } else {
+          content = `
+            <div>
+              <h4>${req.name} (Badge: ${req.badge})</h4>
+              <p class="text-muted">Type: <strong>${req.type}</strong></p>
+              <p>Du <strong>${req.fromDate}</strong> au <strong>${req.toDate}</strong></p>
+              <p class="text-muted">Raison: ${req.reason}</p>
+            </div>
+          `;
+        }
+
+        let actionsHtml = '';
+        if (req.status === 'pending') {
+          actionsHtml = `
+            <button class="btn btn-success" onclick="handleReq('${req.id}', 'approved')">Approuver</button>
+            <button class="btn btn-danger-outline" onclick="handleReq('${req.id}', 'rejected')">Refuser</button>
+          `;
+        } else {
+          actionsHtml = statusBadge;
+        }
+
+        card.innerHTML = `${content}<div class="flex gap-2">${actionsHtml}</div>`;
+        container.appendChild(card);
+      });
+    }
+
+    window.handleReq = async (id, newStatus) => {
+      const req = reqsData.find(r => r.id === id);
+      if (!req) return;
+
+      const batch = window.db.batch();
+      const coll = currentTab === 'corrections' ? CSM.refs.corrections() : CSM.refs.leaveReqs();
+      const reqRef = coll.doc(id);
+
+      batch.update(reqRef, { 
+        status: newStatus, 
+        decidedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        decidedBy: window.auth.currentUser.uid
+      });
+
+      // Apply Correction to Shift if approved
+      if (currentTab === 'corrections' && newStatus === 'approved') {
+        const shiftsSnap = await CSM.refs.shifts().where('badge','==',req.badge).where('date','==',req.date).get();
+        if (!shiftsSnap.empty) {
+          const shiftRef = shiftsSnap.docs[0].ref;
+          batch.update(shiftRef, { [req.field]: req.requestedValue, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+      }
+
+      // Audit Log
+      const auditRef = CSM.refs.auditLog().doc();
+      batch.set(auditRef, {
+        actor: window.auth.currentUser.uid,
+        action: newStatus === 'approved' ? 'APPROVE_REQ' : 'REJECT_REQ',
+        target: id,
+        details: `${currentTab} - ${req.name}`,
+        at: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      await batch.commit();
+    };
+
+    loadData();
+  </script>
+</body>
+</html>

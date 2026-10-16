@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr" class="theme-light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pointeuse - CSM</title>
+  <link rel="icon" href="../shared/200.webp" type="image/webp">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background-color: var(--bg); text-align: center; }
+    .clock { font-family: 'IBM Plex Mono', monospace; font-size: 4rem; font-weight: bold; color: var(--text); margin-bottom: 2rem; }
+    .punch-card { width: 100%; max-width: 500px; padding: 2rem; }
+    .badge-input { font-size: 1.5rem; text-align: center; letter-spacing: 2px; padding: 1rem; margin-bottom: 1.5rem; }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
+    .btn-punch { padding: 1.5rem; font-size: 1.125rem; }
+    .status-area { margin-top: 1.5rem; padding: 1rem; background: var(--bg); border-radius: 6px; font-family: 'IBM Plex Mono', monospace; display: none; }
+  </style>
+</head>
+<body>
+  <div class="clock" id="liveClock">00:00:00</div>
+  
+  <div class="card punch-card">
+    <h2 class="mb-4">Saisissez votre badge</h2>
+    <input type="text" id="badgeInput" class="form-group badge-input" placeholder="Ex: 12345" autocomplete="off">
+    
+    <button id="btnCheck" class="btn btn-primary" style="width: 100%; font-size: 1.125rem; padding: 1rem;">Valider</button>
+
+    <div id="actionArea" style="display:none;">
+      <h3 id="empNameDisplay" class="mt-4"></h3>
+      
+      <div id="statusArea" class="status-area"></div>
+
+      <div class="btn-grid" id="punchButtons">
+        <button class="btn btn-success btn-punch" id="btnIn">Entrée</button>
+        <button class="btn btn-warn btn-punch" id="btnBreakOut">Départ Pause</button>
+        <button class="btn btn-success btn-punch" id="btnBreakIn">Retour Pause</button>
+        <button class="btn btn-danger-outline btn-punch" id="btnOut">Sortie</button>
+      </div>
+      <button class="btn btn-outline mt-4" style="width:100%" onclick="location.reload()">Annuler</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="../shared/firebase.js"></script>
+  <script src="../shared/rules-helpers.js"></script>
+  <script>
+    setInterval(() => {
+      document.getElementById('liveClock').innerText = new Date().toLocaleTimeString('fr-FR', { hour12: false });
+    }, 1000);
+
+    const badgeInput = document.getElementById('badgeInput');
+    const actionArea = document.getElementById('actionArea');
+    let currentStaff = null;
+    let todayShiftId = null;
+    let shiftData = null;
+
+    document.getElementById('btnCheck').onclick = async () => {
+      const badge = badgeInput.value.trim();
+      if (!badge) return;
+      
+      const staffDoc = await CSM.refs.staff(badge).get();
+      if (!staffDoc.exists || staffDoc.data().active === false) {
+        alert("Badge inconnu ou désactivé.");
+        return;
+      }
+      currentStaff = staffDoc.data();
+      document.getElementById('empNameDisplay').innerText = `Bonjour, ${currentStaff.name}`;
+      
+      const today = CSMRules.todayKey();
+      const shiftsSnap = await CSM.refs.shifts().where('badge', '==', badge).where('date', '==', today).get();
+
+      if (!shiftsSnap.empty) {
+        todayShiftId = shiftsSnap.docs[0].id;
+        shiftData = shiftsSnap.docs[0].data();
+      } else {
+        todayShiftId = null;
+        shiftData = { clockIn: null, breakStart: null, breakReturn: null, clockOut: null };
+      }
+
+      updateUI();
+      document.getElementById('btnCheck').style.display = 'none';
+      badgeInput.style.display = 'none';
+      actionArea.style.display = 'block';
+    };
+
+    function updateUI() {
+      const state = CSMRules.shiftState(shiftData, CSMRules.todayKey());
+      const statusArea = document.getElementById('statusArea');
+      
+      if (state.clockIn != null) {
+        statusArea.style.display = 'block';
+        statusArea.innerHTML = `
+          Entrée: ${CSMRules.minToHM(state.clockIn) || '--:--'}<br>
+          Pause: ${CSMRules.minToHM(state.breakStart) || '--:--'} - ${CSMRules.minToHM(state.breakReturn) || '--:--'}<br>
+          Sortie: ${CSMRules.minToHM(state.clockOut) || '--:--'}
+        `;
+      }
+
+      document.getElementById('btnIn').disabled = state.clockIn != null;
+      document.getElementById('btnBreakOut').disabled = state.clockIn == null || state.breakStart != null || state.clockOut != null;
+      document.getElementById('btnBreakIn').disabled = state.breakStart == null || state.breakReturn != null || state.clockOut != null;
+      document.getElementById('btnOut').disabled = state.clockIn == null || state.clockOut != null || (state.breakStart != null && state.breakReturn == null);
+    }
+
+    async function recordPunch(field) {
+      const now = CSMRules.nowMinutes();
+      const payload = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+      payload[field] = now;
+
+      if (!todayShiftId) {
+        payload.badge = currentStaff.badge;
+        payload.name = currentStaff.name;
+        payload.date = CSMRules.todayKey();
+        payload.createdAt = payload.updatedAt;
+        await CSM.refs.shifts().add(payload);
+      } else {
+        await CSM.refs.shift(todayShiftId).update(payload);
+      }
+      
+      alert('Pointage enregistré avec succès.');
+      location.reload();
+    }
+
+    document.getElementById('btnIn').onclick = () => recordPunch('clockIn');
+    document.getElementById('btnBreakOut').onclick = () => recordPunch('breakStart');
+    document.getElementById('btnBreakIn').onclick = () => recordPunch('breakReturn');
+    document.getElementById('btnOut').onclick = () => recordPunch('clockOut');
+  </script>
+</body>
+</html>

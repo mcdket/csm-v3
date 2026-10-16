@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr" class="theme-light">
+<head>
+  <meta charset="UTF-8">
+  <title>Import Quotidien - CSM</title>
+  <link rel="stylesheet" href="../shared/styles.css">
+  <link rel="stylesheet" href="../shared/enterprise.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+</head>
+<body class="enterprise">
+  <header class="topbar">
+    <div class="topbar-brand"><img src="../shared/200.webp" alt="Logo" onerror="this.style.display='none'"> CSM - Import</div>
+    <nav class="topbar-nav">
+      <a href="index.html">Pointages</a>
+      <a href="planning.html">Planning</a>
+      <a href="staff.html">Employés</a>
+      <a href="requests.html">Demandes</a>
+      <a href="daily-import.html" class="active">Importer</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <button id="btnTheme" class="iconbtn">🌙</button>
+      <button id="btnLogout" class="btn btn-outline">Déconnexion</button>
+    </div>
+  </header>
+  
+  <main class="main-content">
+    <div class="page-header"><h2>Importer Rapport Pointages (PDF)</h2></div>
+    <div class="card p-4">
+      <div class="form-group">
+        <label>Sélectionner le PDF "Time Recorder Transaction Report"</label>
+        <input type="file" id="fileUpload" accept="application/pdf">
+      </div>
+      <button id="btnProcess" class="btn btn-primary">Analyser le document</button>
+    </div>
+    <div id="resultContainer" class="mt-4 hidden card p-4">
+      <h3>Aperçu des données</h3>
+      <div class="table-responsive">
+        <table>
+          <thead><tr><th>Badge</th><th>Nom (PDF)</th><th>Entrée</th><th>Pause</th><th>Retour</th><th>Sortie</th><th>Action</th></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+      <button id="btnSaveData" class="btn btn-success mt-4">Enregistrer les pointages</button>
+    </div>
+  </main>
+  
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="../shared/firebase.js"></script>
+  <script src="../shared/rules-helpers.js"></script>
+  <script>
+    const themeBtn = document.getElementById('btnTheme');
+    let isDark = localStorage.getItem('csct_manager_theme') === 'dark';
+    const applyTheme = () => { document.documentElement.className = isDark ? 'theme-dark' : 'theme-light'; themeBtn.innerText = isDark ? '☀️' : '🌙'; localStorage.setItem('csct_manager_theme', isDark ? 'dark' : 'light'); };
+    applyTheme(); themeBtn.onclick = () => { isDark = !isDark; applyTheme(); };
+
+    let parsedShifts = [];
+    let pdfDate = CSMRules.todayKey();
+
+    document.getElementById('btnProcess').onclick = async () => {
+      const file = document.getElementById('fileUpload').files[0];
+      if(!file) return alert("Sélectionnez un fichier.");
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let allRecords = [];
+      
+      for(let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        let items = textContent.items.map(item => ({ str: item.str.trim(), x: item.transform[4], y: item.transform[5] })).filter(i => i.str);
+        
+        // Extract Date from Header
+        const dateItem = items.find(i => i.str.match(/\d{2}\/\d{2}\/\d{4}/) && i.y > 780);
+        if(dateItem) {
+          const parts = dateItem.str.split('/');
+          pdfDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+
+        const headerItem = items.find(i => i.str === "Bno");
+        if(!headerItem) continue;
+        items = items.filter(i => i.y < headerItem.y).sort((a, b) => b.y - a.y || a.x - b.x);
+
+        let currentRecord = null;
+        for(let item of items) {
+          if(item.x >= 30 && item.x <= 55) {
+            if(currentRecord) allRecords.push(currentRecord);
+            currentRecord = { bno: item.str, name: "", inTimes: [], outTimes: [] };
+          } else if(currentRecord) {
+            if(item.x >= 96 && item.x <= 185) currentRecord.name += (currentRecord.name ? " " : "") + item.str;
+            else if(item.x >= 276 && item.x <= 330 && item.str.includes("G")) currentRecord.inTimes.push(item.str.replace("G","").trim());
+            else if(item.x >= 331 && item.x <= 430) currentRecord.outTimes.push(item.str);
+          }
+        }
+        if(currentRecord) allRecords.push(currentRecord);
+      }
+      
+      parsedShifts = allRecords.map(r => {
+        let clockIn = CSMRules.hmToMin(r.inTimes[0]);
+        let breakReturn = CSMRules.hmToMin(r.inTimes[1]);
+        let clockOut = r.inTimes.length > 2 ? CSMRules.hmToMin(r.inTimes[2]) : null;
+        
+        let pBreak = r.outTimes.find(t => t.includes("P"));
+        let breakStart = pBreak ? CSMRules.hmToMin(pBreak.replace("P","").trim()) : null;
+        let gOut = r.outTimes.find(t => t.includes("G"));
+        if (gOut) clockOut = CSMRules.hmToMin(gOut.replace("G","").trim());
+
+        return { badge: r.bno, name: r.name, clockIn, breakStart, breakReturn, clockOut, ignore: false };
+      });
+
+      renderPreview();
+      document.getElementById('resultContainer').classList.remove('hidden');
+    };
+
+    function renderPreview() {
+      const tbody = document.getElementById('previewBody');
+      tbody.innerHTML = '';
+      parsedShifts.forEach((s, idx) => {
+        if(s.ignore) return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.badge}</td>
+          <td>${s.name}</td>
+          <td class="time-font">${CSMRules.minToHM(s.clockIn) || '-'}</td>
+          <td class="time-font">${CSMRules.minToHM(s.breakStart) || '-'}</td>
+          <td class="time-font">${CSMRules.minToHM(s.breakReturn) || '-'}</td>
+          <td class="time-font">${CSMRules.minToHM(s.clockOut) || '-'}</td>
+          <td><button class="btn btn-outline" onclick="parsedShifts[${idx}].ignore = true; renderPreview();">Ignorer</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('btnSaveData').onclick = async () => {
+      const batch = window.db.batch();
+      const shiftsRef = CSM.refs.shifts();
+      let count = 0;
+      
+      for(const s of parsedShifts) {
+        if(s.ignore) continue;
+        const query = await shiftsRef.where('badge','==',s.badge).where('date','==',pdfDate).get();
+        if(query.empty) {
+          const newRef = shiftsRef.doc();
+          batch.set(newRef, { badge: s.badge, name: s.name, date: pdfDate, clockIn: s.clockIn, breakStart: s.breakStart, breakReturn: s.breakReturn, clockOut: s.clockOut, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        } else {
+          batch.update(query.docs[0].ref, { clockIn: s.clockIn, breakStart: s.breakStart, breakReturn: s.breakReturn, clockOut: s.clockOut, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+        count++;
+      }
+      await batch.commit();
+      alert(`${count} pointages importés pour le ${pdfDate}.`);
+      document.getElementById('resultContainer').classList.add('hidden');
+    };
+  </script>
+</body>
+</html>

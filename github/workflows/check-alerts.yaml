@@ -1,0 +1,30 @@
+name: CSM Shift Alerts Cron
+
+on:
+  schedule:
+    - cron: '* * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-alerts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        working-directory: ./push-alerts
+        run: npm install
+
+      - name: Run Alert Check
+        working-directory: ./push-alerts
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          RESTAURANT_ID: 'ketia'
+        run: npm start

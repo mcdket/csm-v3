@@ -22,10 +22,10 @@
                     },
                     colors: {
                         mcd: {
-                            dark: '#1F2937', // Sidebar background
-                            gold: '#FFC107', // Brand accent
+                            dark: '#1F2937',
+                            gold: '#FFC107',
                             goldhover: '#E0A800',
-                            light: '#F3F4F6' // Main background
+                            light: '#F3F4F6'
                         }
                     }
                 }
@@ -34,10 +34,7 @@
     </script>
 
     <style>
-        /* Custom Animations & Refinements */
         body { font-family: 'Inter', sans-serif; background-color: #F3F4F6; overflow: hidden; }
-        
-        /* Smooth transitions for view switching */
         .view-section { display: none; animation: fadeIn 0.3s ease-in-out; }
         .view-section.active { display: block; }
         
@@ -46,7 +43,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Pulse animation for active status */
         .status-dot {
             height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 6px;
         }
@@ -60,13 +56,11 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* Toast Notifications */
         #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1); animation: slideIn 0.3s ease-out forwards; display: flex; align-items: center; gap: 10px; min-width: 250px; }
         .toast.success { background-color: #10B981; }
@@ -85,10 +79,9 @@
 </head>
 <body class="h-screen w-screen flex">
 
-    <!-- Toast Notification Container -->
     <div id="toast-container"></div>
 
-    <!-- ==================== LOGIN VIEW ==================== -->
+    <!-- LOGIN VIEW -->
     <div id="view-login" class="view-section active w-full h-full flex items-center justify-center bg-gray-50 absolute inset-0 z-50">
         <div class="max-w-md w-full bg-white rounded-xl shadow-xl p-8 space-y-6">
             <div class="text-center">
@@ -115,10 +108,8 @@
         </div>
     </div>
 
-    <!-- ==================== APP SHELL (Sidebar + Main) ==================== -->
+    <!-- APP SHELL -->
     <div id="app-shell" class="hidden w-full h-full flex">
-        
-        <!-- Sidebar -->
         <nav class="w-64 bg-mcd-dark text-white flex flex-col shadow-2xl z-10">
             <div class="h-20 flex items-center px-6 border-b border-gray-700">
                 <i class="fa-solid fa-burger text-2xl text-mcd-gold mr-3"></i>
@@ -156,9 +147,7 @@
             </div>
         </nav>
 
-        <!-- Main Content Area -->
         <main class="flex-1 bg-mcd-light overflow-y-auto h-full flex flex-col">
-            
             <!-- Dashboard View -->
             <div id="view-dashboard" class="view-section p-8">
                 <div class="mb-8 flex justify-between items-end">
@@ -172,46 +161,24 @@
                     </div>
                 </div>
 
-                <!-- Stats Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center">
-                        <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
-                            <i class="fa-solid fa-users text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">En Service</p>
-                            <p class="text-2xl font-bold text-gray-800" id="stat-online">0</p>
-                        </div>
+                        <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4"><i class="fa-solid fa-users text-xl"></i></div>
+                        <div><p class="text-sm text-gray-500 font-medium">En Service</p><p class="text-2xl font-bold text-gray-800" id="stat-online">0</p></div>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center">
-                        <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
-                            <i class="fa-solid fa-mug-hot text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">En Pause</p>
-                            <p class="text-2xl font-bold text-gray-800" id="stat-break">0</p>
-                        </div>
+                        <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4"><i class="fa-solid fa-mug-hot text-xl"></i></div>
+                        <div><p class="text-sm text-gray-500 font-medium">En Pause</p><p class="text-2xl font-bold text-gray-800" id="stat-break">0</p></div>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center">
-                        <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
-                            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Alertes (>4h30)</p>
-                            <p class="text-2xl font-bold text-gray-800" id="stat-alerts">0</p>
-                        </div>
+                        <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4"><i class="fa-solid fa-triangle-exclamation text-xl"></i></div>
+                        <div><p class="text-sm text-gray-500 font-medium">Alertes (>4h30)</p><p class="text-2xl font-bold text-gray-800" id="stat-alerts">0</p></div>
                     </div>
                 </div>
 
-                <!-- Live Shift Table -->
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
                         <h3 class="font-bold text-gray-700">Contrôle des Services</h3>
-                        <div class="flex items-center text-sm text-gray-500 space-x-4">
-                            <span><span class="status-dot dot-online"></span> En Service</span>
-                            <span><span class="status-dot dot-break"></span> Pause</span>
-                            <span><span class="status-dot dot-offline"></span> Repos</span>
-                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
@@ -224,26 +191,23 @@
                                     <th class="px-6 py-4 font-medium text-right">Actions Rapides</th>
                                 </tr>
                             </thead>
-                            <tbody id="dashboard-tbody" class="divide-y divide-gray-100 text-sm">
-                                <!-- Populated by JS -->
-                            </tbody>
+                            <tbody id="dashboard-tbody" class="divide-y divide-gray-100 text-sm"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Staff Management View -->
+            <!-- Staff View -->
             <div id="view-staff" class="view-section p-8">
                 <div class="flex justify-between items-end mb-8">
                     <div>
                         <h2 class="text-3xl font-bold text-gray-800">Gestion des Employés</h2>
-                        <p class="text-gray-500 mt-1">Ajoutez, modifiez ou supprimez les membres de l'équipe KETIA.</p>
+                        <p class="text-gray-500 mt-1">Ajoutez ou modifiez les membres de l'équipe.</p>
                     </div>
                     <button onclick="openStaffModal()" class="bg-mcd-gold hover:bg-mcd-goldhover text-mcd-dark font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors flex items-center">
                         <i class="fa-solid fa-plus mr-2"></i> Ajouter Employé
                     </button>
                 </div>
-
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -253,9 +217,7 @@
                                 <th class="px-6 py-4 font-medium text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="staff-tbody" class="divide-y divide-gray-100 text-sm">
-                            <!-- Populated by JS -->
-                        </tbody>
+                        <tbody id="staff-tbody" class="divide-y divide-gray-100 text-sm"></tbody>
                     </table>
                 </div>
             </div>
@@ -263,100 +225,60 @@
             <!-- Settings View -->
             <div id="view-settings" class="view-section p-8">
                 <h2 class="text-3xl font-bold text-gray-800 mb-2">Paramètres</h2>
-                <p class="text-gray-500 mb-8">Configuration système et alertes Push.</p>
-                
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 max-w-2xl">
                     <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Informations Restaurant</h3>
-                    <div class="grid grid-cols-2 gap-4 mb-8">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500">ID Restaurant</label>
-                            <p class="font-semibold text-gray-800" id="settings-rest-id">KETIA</p>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500">Limite de travail continu (Maroc)</label>
-                            <p class="font-semibold text-gray-800">4 heures 50 minutes</p>
-                        </div>
-                    </div>
-
-                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Alertes Ntfy (Push Mobile)</h3>
-                    <p class="text-sm text-gray-600 mb-4">Pour recevoir les alertes sur votre téléphone avant qu'un employé ne dépasse 4h50 de travail, installez l'application Ntfy et abonnez-vous au canal configuré dans vos secrets GitHub.</p>
-                    <button onclick="testNotification()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors text-sm">
-                        <i class="fa-solid fa-bell mr-2 text-mcd-gold"></i> Tester une alerte locale
-                    </button>
+                    <p class="text-sm text-gray-600">ID: <b>KETIA</b> | Limite marocaine: <b>4h50</b></p>
                 </div>
             </div>
-
         </main>
     </div>
 
-    <!-- Staff Form Modal (Hidden by default) -->
+    <!-- Modals -->
     <div id="staff-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform origin-bottom" id="staff-modal-content">
-            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                <h3 class="font-bold text-gray-800" id="modal-title">Ajouter un Employé</h3>
-                <button onclick="closeStaffModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-            <form id="staff-form" class="p-6 space-y-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 class="font-bold text-gray-800 mb-4" id="modal-title">Ajouter un Employé</h3>
+            <form id="staff-form" class="space-y-4">
                 <input type="hidden" id="staff-mode" value="add">
-                <input type="hidden" id="staff-original-badge" value="">
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Numéro de Badge</label>
-                    <input type="text" id="staff-badge" required class="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-mcd-gold focus:border-mcd-gold sm:text-sm outline-none transition-colors" placeholder="Ex: 1001">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nom Complet</label>
-                    <input type="text" id="staff-name" required class="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-mcd-gold focus:border-mcd-gold sm:text-sm outline-none transition-colors" placeholder="Ex: Yassine B.">
-                </div>
-                <div class="pt-4 flex justify-end space-x-3">
-                    <button type="button" onclick="closeStaffModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 font-medium text-sm transition-colors">Annuler</button>
-                    <button type="submit" class="px-4 py-2 bg-mcd-dark text-white rounded-lg hover:bg-black font-medium text-sm transition-colors">Enregistrer</button>
+                <div><label class="block text-sm font-medium text-gray-700">Badge</label><input type="text" id="staff-badge" required class="w-full px-4 py-2 border rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Nom</label><input type="text" id="staff-name" required class="w-full px-4 py-2 border rounded-lg"></div>
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" onclick="closeStaffModal()" class="px-4 py-2 border rounded-lg">Annuler</button>
+                    <button type="submit" class="px-4 py-2 bg-mcd-dark text-white rounded-lg">Enregistrer</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Confirm Modal -->
     <div id="confirm-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center space-y-4">
-            <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto text-red-500 text-2xl mb-2">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
             <h3 class="text-xl font-bold text-gray-900" id="confirm-title">Confirmation</h3>
             <p class="text-gray-500 text-sm" id="confirm-message">Êtes-vous sûr ?</p>
-            <div class="flex justify-center space-x-3 pt-4">
-                <button onclick="closeConfirmModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 font-medium text-sm transition-colors">Annuler</button>
-                <button id="confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm transition-colors">Confirmer</button>
+            <div class="flex justify-center space-x-3 pt-2">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 border rounded-lg">Annuler</button>
+                <button id="confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg">Confirmer</button>
             </div>
         </div>
     </div>
 
-
-    <!-- ==================== LOGIC SECTION ==================== -->
+    <!-- LOGIC -->
     <script type="module">
-        // Import Firebase v11.6.1 Modular SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCQHH4QgqgYNu3tnGDP55Pne0neQskUvqE",
             authDomain: "contractsocialmanager-v1.firebaseapp.com",
             projectId: "contractsocialmanager-v1",
             storageBucket: "contractsocialmanager-v1.firebasestorage.app",
             messagingSenderId: "990515772482",
-            appId: "1:990515772482:web:8384d6427f315e2bddc1db"
+            appId: "1:887068908069:web:d5a039e90add6c2c45fdcc"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Global State
         const RESTAURANT_ID = 'ketia';
         let staffList = [];
         let activeShifts = {};
@@ -364,43 +286,24 @@
         let unsubscribeStaff = null;
         let unsubscribeShifts = null;
 
-        // --- Custom Toast System ---
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
-            
-            let icon = 'check-circle';
-            if (type === 'error') icon = 'circle-exclamation';
-            if (type === 'warning') icon = 'triangle-exclamation';
-            
+            let icon = type === 'error' ? 'circle-exclamation' : type === 'warning' ? 'triangle-exclamation' : 'check-circle';
             toast.innerHTML = `<i class="fa-solid fa-${icon}"></i> <span>${message}</span>`;
             container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.animation = 'slideOut 0.3s ease-in forwards';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            setTimeout(() => { toast.style.animation = 'slideOut 0.3s ease-in forwards'; setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        // --- Navigation ---
         window.navigate = function(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(el => {
-                el.classList.remove('bg-gray-800', 'text-mcd-gold');
-                el.classList.add('text-gray-400');
-            });
-            
+            document.querySelectorAll('.nav-btn').forEach(el => { el.classList.remove('bg-gray-800', 'text-mcd-gold'); el.classList.add('text-gray-400'); });
             document.getElementById(`view-${viewId}`).classList.add('active');
-            
             const navBtn = document.getElementById(`nav-${viewId}`);
-            if (navBtn) {
-                navBtn.classList.remove('text-gray-400');
-                navBtn.classList.add('bg-gray-800', 'text-mcd-gold');
-            }
+            if (navBtn) { navBtn.classList.remove('text-gray-400'); navBtn.classList.add('bg-gray-800', 'text-mcd-gold'); }
         };
 
-        // --- Auth Logic (Fixed Modular Implementation) ---
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
@@ -408,50 +311,38 @@
             const btn = document.getElementById('login-btn');
 
             btn.disabled = true;
-            const originalText = btn.innerHTML;
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Connexion...`;
 
             try {
-                // 1. Authenticate with Firebase Auth Modular SDK
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // 2. Check manager permissions in Firestore Modular SDK
-                const docRef = doc(db, 'managerRestaurants', user.uid);
-                const docSnap = await getDoc(docRef);
-                
-                if (!docSnap.exists()) {
+                const docSnap = await getDoc(doc(db, 'managerRestaurants', user.uid));
+                if (!docSnap.exists() || docSnap.data().restaurantId !== RESTAURANT_ID) {
                     await signOut(auth);
                     throw new Error("Accès refusé. Vous n'êtes pas assigné à ce restaurant.");
                 }
 
-                const restaurantId = docSnap.data().restaurantId;
-                if (restaurantId !== RESTAURANT_ID) {
-                    await signOut(auth);
-                    throw new Error("Accès refusé pour ce restaurant.");
-                }
-
-                localStorage.setItem('csm_restaurantId', restaurantId);
                 showToast("Connexion réussie");
-
+                // Force instant UI unlock
+                document.getElementById('view-login').classList.remove('active');
+                document.getElementById('app-shell').classList.remove('hidden');
+                navigate('dashboard');
+                startDataListeners();
+                startClock();
             } catch (error) {
                 console.error("Login error:", error);
                 showToast(error.message || "Erreur de connexion", "error");
                 btn.disabled = false;
-                btn.innerHTML = originalText;
+                btn.innerHTML = `<i class="fa-solid fa-right-to-bracket mr-2 mt-0.5"></i> Se connecter`;
             }
         });
 
         window.handleLogout = async function() {
-            try {
-                await signOut(auth);
-                showToast("Déconnexion réussie");
-            } catch (error) {
-                showToast("Erreur lors de la déconnexion", "error");
-            }
+            await signOut(auth);
+            window.location.reload();
         };
 
-        // Listen for Auth State Changes
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 try {
@@ -466,172 +357,117 @@
                     } else {
                         await signOut(auth);
                     }
-                } catch (e) {
-                    await signOut(auth);
-                }
+                } catch (e) { await signOut(auth); }
             } else {
                 document.getElementById('app-shell').classList.add('hidden');
-                document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
                 document.getElementById('view-login').classList.add('active');
-                document.getElementById('login-btn').innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2 mt-0.5"></i> Se connecter';
-                document.getElementById('login-btn').disabled = false;
                 stopDataListeners();
                 stopClock();
             }
         });
 
-        // --- Clock & Timers ---
         function startClock() {
             if(liveTimerInterval) clearInterval(liveTimerInterval);
-            updateClocks();
-            liveTimerInterval = setInterval(updateClocks, 1000);
+            liveTimerInterval = setInterval(() => {
+                document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('fr-FR');
+                updateContinuousTimers();
+            }, 1000);
         }
-        function stopClock() {
-            if(liveTimerInterval) clearInterval(liveTimerInterval);
-        }
-        function updateClocks() {
-            const now = new Date();
-            document.getElementById('live-clock').innerText = now.toLocaleTimeString('fr-FR');
-            updateContinuousTimers();
-        }
+        function stopClock() { if(liveTimerInterval) clearInterval(liveTimerInterval); }
 
         function calculateContinuousTime(shift) {
             if (!shift) return null;
             const now = new Date();
             let start = new Date(shift.startTime);
-            
-            if (shift.breakStart && !shift.breakEnd) {
-                return { ms: new Date(shift.breakStart) - start, active: false };
-            }
-            if (shift.breakEnd) {
-                start = new Date(shift.breakEnd);
-            }
+            if (shift.breakStart && !shift.breakEnd) return { ms: new Date(shift.breakStart) - start, active: false };
+            if (shift.breakEnd) start = new Date(shift.breakEnd);
             return { ms: now - start, active: true };
         }
 
         function formatDuration(ms) {
-            const totalMins = Math.floor(ms / 60000);
-            const h = Math.floor(totalMins / 60);
-            const m = totalMins % 60;
-            return `${h}h ${m < 10 ? '0' : ''}${m}m`;
+            const mins = Math.floor(ms / 60000);
+            return `${Math.floor(mins / 60)}h ${mins % 60 < 10 ? '0' : ''}${mins % 60}m`;
         }
 
         function updateContinuousTimers() {
-            let alertsCount = 0;
+            let alerts = 0;
             staffList.forEach(staff => {
                 const shift = activeShifts[staff.id];
-                const timeCell = document.getElementById(`time-${staff.id}`);
-                
-                if (shift && timeCell) {
-                    const timeData = calculateContinuousTime(shift);
-                    const formatted = formatDuration(timeData.ms);
-                    const totalMins = Math.floor(timeData.ms / 60000);
-                    let badgeClass = "bg-gray-100 text-gray-600";
-                    
-                    if (timeData.active) {
-                        if (totalMins >= 290) { // 4h50
-                            badgeClass = "bg-red-100 text-red-700 border border-red-200 animate-pulse";
-                            alertsCount++;
-                        } else if (totalMins >= 270) { // 4h30
-                            badgeClass = "bg-yellow-100 text-yellow-700 border border-yellow-200";
-                            alertsCount++;
-                        } else {
-                            badgeClass = "bg-green-50 text-green-700 border border-green-200";
-                        }
+                const cell = document.getElementById(`time-${staff.id}`);
+                if (shift && cell) {
+                    const t = calculateContinuousTime(shift);
+                    const mins = Math.floor(t.ms / 60000);
+                    let cls = "bg-gray-100 text-gray-600";
+                    if (t.active) {
+                        if (mins >= 290) { cls = "bg-red-100 text-red-700 animate-pulse"; alerts++; }
+                        else if (mins >= 270) { cls = "bg-yellow-100 text-yellow-700"; alerts++; }
+                        else { cls = "bg-green-50 text-green-700"; }
                     }
-                    timeCell.innerHTML = `<span class="px-2.5 py-1 rounded-md text-xs font-semibold ${badgeClass}">${formatted}</span>`;
+                    cell.innerHTML = `<span class="px-2.5 py-1 rounded-md text-xs font-semibold ${cls}">${formatDuration(t.ms)}</span>`;
                 }
             });
-            document.getElementById('stat-alerts').innerText = alertsCount;
+            document.getElementById('stat-alerts').innerText = alerts;
         }
 
-        // --- Realtime Data Listeners ---
         function startDataListeners() {
             if (!auth.currentUser) return;
-
-            const staffRef = collection(db, 'restaurants', RESTAURANT_ID, 'staff');
-            unsubscribeStaff = onSnapshot(staffRef, (snapshot) => {
+            unsubscribeStaff = onSnapshot(collection(db, 'restaurants', RESTAURANT_ID, 'staff'), snap => {
                 staffList = [];
-                snapshot.forEach(doc => staffList.push({ id: doc.id, ...doc.data() }));
+                snap.forEach(d => staffList.push({ id: d.id, ...d.data() }));
                 staffList.sort((a, b) => a.name.localeCompare(b.name));
                 renderStaffTable();
                 renderDashboard();
-            }, (error) => showToast("Erreur lecture employés", "error"));
+            });
 
-            const todayStr = new Date().toISOString().split('T')[0];
-            const shiftsRef = collection(db, 'restaurants', RESTAURANT_ID, 'shifts');
-            const q = query(shiftsRef, where('date', '==', todayStr));
-            
-            unsubscribeShifts = onSnapshot(q, (snapshot) => {
+            const today = new Date().toISOString().split('T')[0];
+            unsubscribeShifts = onSnapshot(query(collection(db, 'restaurants', RESTAURANT_ID, 'shifts'), where('date', '==', today)), snap => {
                 activeShifts = {};
-                let online = 0;
-                let onbreak = 0;
-
-                snapshot.forEach(doc => {
-                    const shift = doc.data();
-                    if (!shift.endTime) {
-                        activeShifts[shift.badge] = { id: doc.id, ...shift };
-                        if (shift.breakStart && !shift.breakEnd) {
-                            onbreak++;
-                        } else {
-                            online++;
-                        }
+                let online = 0, onbreak = 0;
+                snap.forEach(d => {
+                    const s = d.data();
+                    if (!s.endTime) {
+                        activeShifts[s.badge] = { id: d.id, ...s };
+                        if (s.breakStart && !s.breakEnd) onbreak++; else online++;
                     }
                 });
-                
                 document.getElementById('stat-online').innerText = online;
                 document.getElementById('stat-break').innerText = onbreak;
                 renderDashboard();
-            }, (error) => showToast("Erreur lecture services", "error"));
+            });
         }
 
         function stopDataListeners() {
-            if(unsubscribeStaff) unsubscribeStaff();
-            if(unsubscribeShifts) unsubscribeShifts();
+            if (unsubscribeStaff) unsubscribeStaff();
+            if (unsubscribeShifts) unsubscribeShifts();
         }
 
-        // --- Render UI ---
         function renderDashboard() {
             const tbody = document.getElementById('dashboard-tbody');
             tbody.innerHTML = '';
-
             if (staffList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Aucun employé. Ajoutez-en dans l\'onglet Employés.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Aucun employé trouvé.</td></tr>';
                 return;
             }
-
             staffList.forEach(staff => {
                 const shift = activeShifts[staff.id];
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 transition-colors";
-                
-                let statusHtml = '<div class="flex items-center text-gray-500"><span class="status-dot dot-offline"></span> Repos</div>';
-                let timeHtml = '<span class="text-gray-300">-</span>';
-                let actionsHtml = `<button onclick="actionStartShift('${staff.id}', '${staff.name.replace(/'/g, "\\'")}')" class="bg-mcd-dark hover:bg-black text-white px-3 py-1.5 rounded text-xs font-medium transition-colors">Démarrer</button>`;
+                tr.className = "hover:bg-gray-50";
+                let status = '<span class="status-dot dot-offline"></span> Repos';
+                let time = '-';
+                let acts = `<button onclick="actionStartShift('${staff.id}', '${staff.name.replace(/'/g, "\\'")}')" class="bg-mcd-dark text-white px-3 py-1 rounded text-xs font-medium">Démarrer</button>`;
 
                 if (shift) {
-                    timeHtml = `<div id="time-${staff.id}">--:--</div>`;
+                    time = `<div id="time-${staff.id}">--:--</div>`;
                     if (shift.breakStart && !shift.breakEnd) {
-                        statusHtml = '<div class="flex items-center text-yellow-600 font-medium"><span class="status-dot dot-break"></span> En Pause</div>';
-                        actionsHtml = `<button onclick="actionEndBreak('${shift.id}')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors shadow-sm">Retour Pause</button>`;
+                        status = '<span class="status-dot dot-break"></span> En Pause';
+                        acts = `<button onclick="actionEndBreak('${shift.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded text-xs font-medium">Retour Pause</button>`;
                     } else {
-                        statusHtml = '<div class="flex items-center text-green-600 font-medium"><span class="status-dot dot-online"></span> En Service</div>';
-                        actionsHtml = `
-                            <div class="flex justify-end space-x-2">
-                                <button onclick="actionStartBreak('${shift.id}')" class="bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-yellow-200">Départ Pause</button>
-                                <button onclick="actionEndShift('${shift.id}')" class="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-red-200">Terminer</button>
-                            </div>
-                        `;
+                        status = '<span class="status-dot dot-online"></span> En Service';
+                        acts = `<button onclick="actionStartBreak('${shift.id}')" class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs mr-1">Pause</button>` +
+                               `<button onclick="actionEndShift('${shift.id}')" class="bg-red-50 text-red-600 px-2 py-1 rounded text-xs">Terminer</button>`;
                     }
                 }
-
-                tr.innerHTML = `
-                    <td class="px-6 py-4 font-medium text-gray-900">${staff.name}</td>
-                    <td class="px-6 py-4 text-gray-500">#${staff.id}</td>
-                    <td class="px-6 py-4">${statusHtml}</td>
-                    <td class="px-6 py-4">${timeHtml}</td>
-                    <td class="px-6 py-4 text-right">${actionsHtml}</td>
-                `;
+                tr.innerHTML = `<td class="px-6 py-4 font-medium">${staff.name}</td><td class="px-6 py-4 text-gray-500">#${staff.id}</td><td class="px-6 py-4">${status}</td><td class="px-6 py-4">${time}</td><td class="px-6 py-4 text-right">${acts}</td>`;
                 tbody.appendChild(tr);
             });
             updateContinuousTimers();
@@ -640,166 +476,49 @@
         function renderStaffTable() {
             const tbody = document.getElementById('staff-tbody');
             tbody.innerHTML = '';
-            
-            if (staffList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-8 text-center text-gray-500">Aucun employé trouvé.</td></tr>';
-                return;
-            }
-
             staffList.forEach(staff => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50 transition-colors";
-                tr.innerHTML = `
-                    <td class="px-6 py-4 font-medium text-gray-600">#${staff.id}</td>
-                    <td class="px-6 py-4 font-medium text-gray-900">${staff.name}</td>
-                    <td class="px-6 py-4 text-right space-x-2">
-                        <button onclick="editStaff('${staff.id}', '${staff.name.replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-2 rounded transition-colors" title="Modifier">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <button onclick="confirmDeleteStaff('${staff.id}')" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded transition-colors" title="Supprimer">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </td>
-                `;
+                tr.innerHTML = `<td class="px-6 py-4">#${staff.id}</td><td class="px-6 py-4 font-medium">${staff.name}</td><td class="px-6 py-4 text-right"><button onclick="confirmDeleteStaff('${staff.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td>`;
                 tbody.appendChild(tr);
             });
         }
 
-        // --- Shift Actions ---
-        window.actionStartShift = async function(badge, name) {
+        window.actionStartShift = async (badge, name) => {
             const now = new Date();
-            try {
-                await addDoc(collection(db, 'restaurants', RESTAURANT_ID, 'shifts'), {
-                    badge: badge,
-                    name: name,
-                    date: now.toISOString().split('T')[0],
-                    startTime: now.toISOString(),
-                    endTime: null,
-                    breakStart: null,
-                    breakEnd: null
-                });
-                showToast("Service démarré", "success");
-            } catch (e) { showToast("Erreur", "error"); }
+            await addDoc(collection(db, 'restaurants', RESTAURANT_ID, 'shifts'), { badge, name, date: now.toISOString().split('T')[0], startTime: now.toISOString(), endTime: null, breakStart: null, breakEnd: null });
+            showToast("Service démarré");
         };
-
-        window.actionStartBreak = async function(shiftId) {
-            try {
-                await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'shifts', shiftId), {
-                    breakStart: new Date().toISOString()
-                });
-                showToast("Départ en pause", "warning");
-            } catch (e) { showToast("Erreur", "error"); }
-        };
-
-        window.actionEndBreak = async function(shiftId) {
-            try {
-                await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'shifts', shiftId), {
-                    breakEnd: new Date().toISOString()
-                });
-                showToast("Retour de pause enregistré", "success");
-            } catch (e) { showToast("Erreur", "error"); }
-        };
-
-        window.actionEndShift = function(shiftId) {
-            openConfirmModal("Fin de service", "Confirmez-vous la fin de ce service ?", async () => {
-                try {
-                    await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'shifts', shiftId), {
-                        endTime: new Date().toISOString()
-                    });
-                    showToast("Service terminé", "success");
-                } catch (e) { showToast("Erreur", "error"); }
+        window.actionStartBreak = async (id) => { await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'shifts', id), { breakStart: new Date().toISOString() }); showToast("Pause démarrée", "warning"); };
+        window.actionEndBreak = async (id) => { await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'shifts', id), { breakEnd: new Date().toISOString() }); showToast("Retour de pause"); };
+        window.actionEndShift = (id) => {
+            openConfirmModal("Fin de service", "Terminer ce service ?", async () => {
+                await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'shifts', id), { endTime: new Date().toISOString() });
+                showToast("Service terminé");
             });
         };
 
-        // --- Staff Management Functions ---
-        const staffModal = document.getElementById('staff-modal');
-        const staffModalContent = document.getElementById('staff-modal-content');
-        
-        window.openStaffModal = function() {
-            document.getElementById('staff-form').reset();
-            document.getElementById('staff-mode').value = 'add';
-            document.getElementById('staff-badge').disabled = false;
-            document.getElementById('modal-title').innerText = 'Ajouter un Employé';
-            staffModal.classList.remove('hidden');
-            setTimeout(() => staffModalContent.classList.remove('scale-95'), 10);
-        };
-
-        window.closeStaffModal = function() {
-            staffModalContent.classList.add('scale-95');
-            setTimeout(() => staffModal.classList.add('hidden'), 200);
-        };
-
-        window.editStaff = function(badge, name) {
-            document.getElementById('staff-mode').value = 'edit';
-            document.getElementById('staff-original-badge').value = badge;
-            document.getElementById('staff-badge').value = badge;
-            document.getElementById('staff-badge').disabled = true;
-            document.getElementById('staff-name').value = name;
-            document.getElementById('modal-title').innerText = 'Modifier l\'Employé';
-            staffModal.classList.remove('hidden');
-            setTimeout(() => staffModalContent.classList.remove('scale-95'), 10);
-        };
-
+        const modal = document.getElementById('staff-modal');
+        window.openStaffModal = () => { document.getElementById('staff-form').reset(); modal.classList.remove('hidden'); };
+        window.closeStaffModal = () => modal.classList.add('hidden');
         document.getElementById('staff-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const mode = document.getElementById('staff-mode').value;
             const badge = document.getElementById('staff-badge').value.trim();
             const name = document.getElementById('staff-name').value.trim();
-            
-            if (!badge || !name) return;
-
-            try {
-                if (mode === 'add') {
-                    const docSnap = await getDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge));
-                    if(docSnap.exists()) {
-                        showToast("Ce numéro de badge existe déjà", "error");
-                        return;
-                    }
-                    await setDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge), { name: name });
-                    showToast("Employé ajouté");
-                } else {
-                    await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge), { name: name });
-                    showToast("Employé modifié");
-                }
-                closeStaffModal();
-            } catch (err) {
-                showToast("Erreur de sauvegarde", "error");
-            }
+            await setDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge), { name });
+            showToast("Employé enregistré");
+            closeStaffModal();
         });
 
-        // --- Generic Confirm Modal ---
-        let confirmCallback = null;
-        window.openConfirmModal = function(title, message, callback) {
-            document.getElementById('confirm-title').innerText = title;
-            document.getElementById('confirm-message').innerText = message;
-            confirmCallback = callback;
-            document.getElementById('confirm-modal').classList.remove('hidden');
-        };
-        
-        window.closeConfirmModal = function() {
-            document.getElementById('confirm-modal').classList.add('hidden');
-            confirmCallback = null;
-        };
-
-        document.getElementById('confirm-btn').addEventListener('click', () => {
-            if(confirmCallback) confirmCallback();
-            closeConfirmModal();
-        });
-
-        window.confirmDeleteStaff = function(badge) {
-            openConfirmModal("Supprimer", `Voulez-vous vraiment supprimer l'employé #${badge} ?`, async () => {
-                try {
-                    await deleteDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge));
-                    showToast("Employé supprimé");
-                } catch (e) {
-                    showToast("Erreur lors de la suppression", "error");
-                }
+        let cb = null;
+        window.openConfirmModal = (title, msg, fn) => { document.getElementById('confirm-title').innerText = title; document.getElementById('confirm-message').innerText = msg; cb = fn; document.getElementById('confirm-modal').classList.remove('hidden'); };
+        window.closeConfirmModal = () => document.getElementById('confirm-modal').classList.add('hidden');
+        document.getElementById('confirm-btn').addEventListener('click', () => { if(cb) cb(); closeConfirmModal(); });
+        window.confirmDeleteStaff = (badge) => {
+            openConfirmModal("Supprimer", `Supprimer #${badge} ?`, async () => {
+                await deleteDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge));
+                showToast("Employé supprimé");
             });
         };
-
-        window.testNotification = function() {
-            showToast("Test d'alerte déclenché avec succès", "warning");
-        }
     </script>
 </body>
 </html>

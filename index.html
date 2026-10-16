@@ -406,23 +406,40 @@
 
         // --- Auth Logic ---
         document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('login-btn');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Connexion...';
-            btn.disabled = true;
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const btn = document.getElementById('login-btn');
 
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `Connexion en cours...`;
 
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                // The onAuthStateChanged listener will handle the redirect
-            } catch (error) {
-                showToast("Identifiants incorrects ou accès refusé.", "error");
-                btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2 mt-0.5"></i> Se connecter';
-                btn.disabled = false;
-            }
-        });
+    try {
+        // 1. Authenticate with Firebase Auth
+        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+
+        // 2. Check manager permissions in Firestore
+        const docRef = await firebase.firestore().collection('managerRestaurants').doc(user.uid).get();
+        
+        if (!docRef.exists) {
+            throw new Error("Accès refusé. Vous n'êtes pas assigné à ce restaurant.");
+        }
+
+        const restaurantId = docRef.data().restaurantId;
+        localStorage.setItem('csm_restaurantId', restaurantId);
+
+        // Success: Reload to show dashboard
+        window.location.reload();
+
+    } catch (error) {
+        console.error("Login error:", error);
+        alert("Erreur de connexion: " + error.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+});
 
         window.handleLogout = async function() {
             try {

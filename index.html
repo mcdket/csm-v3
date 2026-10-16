@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSM - Manager Control Panel</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tailwind Config for Custom Brand Colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        mcd: {
+                            dark: '#1F2937', // Sidebar background
+                            gold: '#FFC107', // Brand accent
+                            goldhover: '#E0A800',
+                            light: '#F3F4F6' // Main background
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Animations & Refinements */
+        body { font-family: 'Inter', sans-serif; background-color: #F3F4F6; overflow: hidden; }
+        
+        /* Smooth transitions for view switching */
+        .view-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .view-section.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Pulse animation for active status */
+        .status-dot {
+            height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 6px;
+        }
+        .dot-online { background-color: #10B981; box-shadow: 0 0 8px #10B981; animation: pulse 2s infinite; }
+        .dot-break { background-color: #F59E0B; }
+        .dot-offline { background-color: #9CA3AF; }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Toast Notifications */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1); animation: slideIn 0.3s ease-out forwards; display: flex; align-items: center; gap: 10px; min-width: 250px; }
+        .toast.success { background-color: #10B981; }
+        .toast.error { background-color: #EF4444; }
+        .toast.warning { background-color: #F59E0B; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- ==================== LOGIN VIEW ==================== -->
+    <div id="view-login" class="view-section active w-full h-full flex items-center justify-center bg-gray-50 absolute inset-0 z-50">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-xl p-8 space-y-6">
+            <div class="text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-mcd-dark mb-4">
+                    <i class="fa-solid fa-burger text-3xl text-mcd-gold"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">Espace Manager</h2>
+                <p class="text-gray-500 mt-2">Contract Social Manager - Agadir</p>
+            </div>
+            
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="login-email" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-mcd-gold focus:border-mcd-gold sm:text-sm outline-none transition-colors" placeholder="manager@ketia.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Mot de passe</label>
+                    <input type="password" id="login-password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-mcd-gold focus:border-mcd-gold sm:text-sm outline-none transition-colors" placeholder="••••••••">
+                </div>
+                <button type="submit" id="login-btn" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-mcd-dark bg-mcd-gold hover:bg-mcd-goldhover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mcd-gold transition-colors">
+                    <i class="fa-solid fa-right-to-bracket mr-2 mt-0.5"></i> Se connecter
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== APP SHELL (Sidebar + Main) ==================== -->
+    <div id="app-shell" class="hidden w-full h-full flex">
+        
+        <!-- Sidebar -->
+        <nav class="w-64 bg-mcd-dark text-white flex flex-col shadow-2xl z-10">
+            <div class="h-20 flex items-center px-6 border-b border-gray-700">
+                <i class="fa-solid fa-burger text-2xl text-mcd-gold mr-3"></i>
+                <h1 class="text-xl font-bold tracking-wider">CSM<span class="text-mcd-gold">Manager</span></h1>
+            </div>
+            
+            <div class="flex-1 py-6 px-4 space-y-2">
+                <button onclick="navigate('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center px-4 py-3 rounded-lg bg-gray-800 text-mcd-gold transition-colors">
+                    <i class="fa-solid fa-chart-pie w-6"></i>
+                    <span class="font-medium">Tableau de Bord</span>
+                </button>
+                <button onclick="navigate('staff')" id="nav-staff" class="nav-btn w-full flex items-center px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+                    <i class="fa-solid fa-users w-6"></i>
+                    <span class="font-medium">Employés</span>
+                </button>
+                <button onclick="navigate('settings')" id="nav-settings" class="nav-btn w-full flex items-center px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+                    <i class="fa-solid fa-gear w-6"></i>
+                    <span class="font-medium">Paramètres</span>
+                </button>
+            </div>
+
+            <div class="p-4 border-t border-gray-700">
+                <div class="flex items-center mb-4 px-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-sm font-bold text-white mr-3">
+                        <i class="fa-solid fa-user-tie"></i>
+                    </div>
+                    <div class="text-sm overflow-hidden">
+                        <p class="font-medium truncate" id="user-email-display">manager@ketia.com</p>
+                        <p class="text-gray-400 text-xs">Admin Resto: KETIA</p>
+                    </div>
+                </div>
+                <button onclick="handleLogout()" class="w-full flex items-center justify-center px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-red-500/10 hover:text-red-400 hover:border-red-400 transition-colors text-sm font-medium">
+                    <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Déconnexion
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 bg-mcd-light overflow-y-auto h-full flex flex-col">
+            
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="view-section p-8">
+                <div class="mb-8 flex justify-between items-end">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800">Pointage en Direct</h2>
+                        <p class="text-gray-500 mt-1">Surveillez l'état de l'équipe et gérez les alertes de 4h50.</p>
+                    </div>
+                    <div class="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 flex items-center text-sm font-medium text-gray-600">
+                        <i class="fa-regular fa-clock mr-2 text-mcd-gold"></i>
+                        <span id="live-clock">--:--:--</span>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center">
+                        <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                            <i class="fa-solid fa-users text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">En Service</p>
+                            <p class="text-2xl font-bold text-gray-800" id="stat-online">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center">
+                        <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                            <i class="fa-solid fa-mug-hot text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">En Pause</p>
+                            <p class="text-2xl font-bold text-gray-800" id="stat-break">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center">
+                        <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
+                            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Alertes (>4h30)</p>
+                            <p class="text-2xl font-bold text-gray-800" id="stat-alerts">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Shift Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-700">Contrôle des Services</h3>
+                        <div class="flex items-center text-sm text-gray-500 space-x-4">
+                            <span><span class="status-dot dot-online"></span> En Service</span>
+                            <span><span class="status-dot dot-break"></span> Pause</span>
+                            <span><span class="status-dot dot-offline"></span> Repos</span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-gray-400 text-xs uppercase tracking-wider bg-white border-b border-gray-100">
+                                    <th class="px-6 py-4 font-medium">Employé</th>
+                                    <th class="px-6 py-4 font-medium">Badge</th>
+                                    <th class="px-6 py-4 font-medium">Statut</th>
+                                    <th class="px-6 py-4 font-medium">Temps Continu</th>
+                                    <th class="px-6 py-4 font-medium text-right">Actions Rapides</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-tbody" class="divide-y divide-gray-100 text-sm">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staff Management View -->
+            <div id="view-staff" class="view-section p-8">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800">Gestion des Employés</h2>
+                        <p class="text-gray-500 mt-1">Ajoutez, modifiez ou supprimez les membres de l'équipe KETIA.</p>
+                    </div>
+                    <button onclick="openStaffModal()" class="bg-mcd-gold hover:bg-mcd-goldhover text-mcd-dark font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors flex items-center">
+                        <i class="fa-solid fa-plus mr-2"></i> Ajouter Employé
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-gray-400 text-xs uppercase tracking-wider bg-gray-50 border-b border-gray-100">
+                                <th class="px-6 py-4 font-medium">Badge</th>
+                                <th class="px-6 py-4 font-medium">Nom Complet</th>
+                                <th class="px-6 py-4 font-medium text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staff-tbody" class="divide-y divide-gray-100 text-sm">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="view-settings" class="view-section p-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Paramètres</h2>
+                <p class="text-gray-500 mb-8">Configuration système et alertes Push.</p>
+                
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 max-w-2xl">
+                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Informations Restaurant</h3>
+                    <div class="grid grid-cols-2 gap-4 mb-8">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">ID Restaurant</label>
+                            <p class="font-semibold text-gray-800" id="settings-rest-id">KETIA</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500">Limite de travail continu (Maroc)</label>
+                            <p class="font-semibold text-gray-800">4 heures 50 minutes</p>
+                        </div>
+                    </div>
+
+                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Alertes Ntfy (Push Mobile)</h3>
+                    <p class="text-sm text-gray-600 mb-4">Pour recevoir les alertes sur votre téléphone avant qu'un employé ne dépasse 4h50 de travail, installez l'application Ntfy et abonnez-vous au canal configuré dans vos secrets GitHub.</p>
+                    <button onclick="testNotification()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+                        <i class="fa-solid fa-bell mr-2 text-mcd-gold"></i> Tester une alerte locale
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Staff Form Modal (Hidden by default) -->
+    <div id="staff-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform origin-bottom" id="staff-modal-content">
+            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800" id="modal-title">Ajouter un Employé</h3>
+                <button onclick="closeStaffModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="staff-form" class="p-6 space-y-4">
+                <input type="hidden" id="staff-mode" value="add">
+                <input type="hidden" id="staff-original-badge" value="">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Numéro de Badge</label>
+                    <input type="text" id="staff-badge" required class="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-mcd-gold focus:border-mcd-gold sm:text-sm outline-none transition-colors" placeholder="Ex: 1001">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nom Complet</label>
+                    <input type="text" id="staff-name" required class="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-mcd-gold focus:border-mcd-gold sm:text-sm outline-none transition-colors" placeholder="Ex: Yassine B.">
+                </div>
+                <div class="pt-4 flex justify-end space-x-3">
+                    <button type="button" onclick="closeStaffModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 font-medium text-sm transition-colors">Annuler</button>
+                    <button type="submit" class="px-4 py-2 bg-mcd-dark text-white rounded-lg hover:bg-black font-medium text-sm transition-colors">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center space-y-4">
+            <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto text-red-500 text-2xl mb-2">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900" id="confirm-title">Confirmation</h3>
+            <p class="text-gray-500 text-sm" id="confirm-message">Êtes-vous sûr ?</p>
+            <div class="flex justify-center space-x-3 pt-4">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 font-medium text-sm transition-colors">Annuler</button>
+                <button id="confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm transition-colors">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== LOGIC SECTION ==================== -->
+    <script type="module">
+        // Import Firebase v11.6.1 Modular SDK exactly as required
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // IMPORTANT: The user provided this exact Config for their new project
+        const firebaseConfig = {
+    apiKey: "AIzaSyB_uy_D_AP4-zRyqfuzk8BADDAfgVQ4ZQw",
+    authDomain: "contractsocialmanager.firebaseapp.com",
+    projectId: "contractsocialmanager",
+    storageBucket: "contractsocialmanager.firebasestorage.app",
+    messagingSenderId: "887068908069",
+    appId: "1:887068908069:web:d5a039e90add6c2c45fdcc"
+	};
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Global State
+        const RESTAURANT_ID = 'ketia';
+        let staffList = [];
+        let activeShifts = {};
+        let liveTimerInterval = null;
+        let unsubscribeStaff = null;
+        let unsubscribeShifts = null;
+
+        // --- Custom Toast System ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = 'check-circle';
+            if (type === 'error') icon = 'circle-exclamation';
+            if (type === 'warning') icon = 'triangle-exclamation';
+            
+            toast.innerHTML = `<i class="fa-solid fa-${icon}"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-in forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- Navigation ---
+        window.navigate = function(viewId) {
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            // Remove active state from sidebar
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('bg-gray-800', 'text-mcd-gold');
+                el.classList.add('text-gray-400');
+            });
+            
+            // Show target view
+            document.getElementById(`view-${viewId}`).classList.add('active');
+            
+            // Highlight sidebar button if it exists
+            const navBtn = document.getElementById(`nav-${viewId}`);
+            if (navBtn) {
+                navBtn.classList.remove('text-gray-400');
+                navBtn.classList.add('bg-gray-800', 'text-mcd-gold');
+            }
+        };
+
+        // --- Auth Logic ---
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Connexion...';
+            btn.disabled = true;
+
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // The onAuthStateChanged listener will handle the redirect
+            } catch (error) {
+                showToast("Identifiants incorrects ou accès refusé.", "error");
+                btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2 mt-0.5"></i> Se connecter';
+                btn.disabled = false;
+            }
+        });
+
+        window.handleLogout = async function() {
+            try {
+                await signOut(auth);
+                showToast("Déconnexion réussie");
+            } catch (error) {
+                showToast("Erreur lors de la déconnexion", "error");
+            }
+        };
+
+        // Listen for Auth State Changes
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Verify they are a manager for KETIA
+                try {
+                    const managerDoc = await getDoc(doc(db, 'managerRestaurants', user.uid));
+                    if (managerDoc.exists() && managerDoc.data().restaurantId === RESTAURANT_ID) {
+                        document.getElementById('user-email-display').innerText = user.email;
+                        document.getElementById('view-login').classList.remove('active');
+                        document.getElementById('app-shell').classList.remove('hidden');
+                        navigate('dashboard');
+                        startDataListeners();
+                        startClock();
+                        showToast("Connexion réussie");
+                    } else {
+                        await signOut(auth);
+                        showToast("Accès refusé. Vous n'êtes pas assigné à ce restaurant.", "error");
+                    }
+                } catch (e) {
+                    showToast("Erreur de vérification des permissions", "error");
+                    await signOut(auth);
+                }
+            } else {
+                // Logged out
+                document.getElementById('app-shell').classList.add('hidden');
+                document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+                document.getElementById('view-login').classList.add('active');
+                document.getElementById('login-btn').innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2 mt-0.5"></i> Se connecter';
+                document.getElementById('login-btn').disabled = false;
+                stopDataListeners();
+                stopClock();
+            }
+        });
+
+        // --- Clock & Timers ---
+        function startClock() {
+            if(liveTimerInterval) clearInterval(liveTimerInterval);
+            updateClocks();
+            liveTimerInterval = setInterval(updateClocks, 1000);
+        }
+        function stopClock() {
+            if(liveTimerInterval) clearInterval(liveTimerInterval);
+        }
+        function updateClocks() {
+            // Top clock
+            const now = new Date();
+            document.getElementById('live-clock').innerText = now.toLocaleTimeString('fr-FR');
+            
+            // Update continuous time in dashboard
+            updateContinuousTimers();
+        }
+
+        function calculateContinuousTime(shift) {
+            if (!shift) return null;
+            
+            const now = new Date();
+            let start = new Date(shift.startTime);
+            
+            // If on break, the continuous time is frozen at the moment break started
+            if (shift.breakStart && !shift.breakEnd) {
+                return { ms: new Date(shift.breakStart) - start, active: false };
+            }
+            
+            // If returned from break, count resets from breakEnd in Moroccan labor law context for this specific app
+            if (shift.breakEnd) {
+                start = new Date(shift.breakEnd);
+            }
+            
+            return { ms: now - start, active: true };
+        }
+
+        function formatDuration(ms) {
+            const totalMins = Math.floor(ms / 60000);
+            const h = Math.floor(totalMins / 60);
+            const m = totalMins % 60;
+            return `${h}h ${m < 10 ? '0' : ''}${m}m`;
+        }
+
+        function updateContinuousTimers() {
+            let alertsCount = 0;
+            
+            staffList.forEach(staff => {
+                const shift = activeShifts[staff.id];
+                const timeCell = document.getElementById(`time-${staff.id}`);
+                
+                if (shift && timeCell) {
+                    const timeData = calculateContinuousTime(shift);
+                    const formatted = formatDuration(timeData.ms);
+                    
+                    const totalMins = Math.floor(timeData.ms / 60000);
+                    
+                    let badgeClass = "bg-gray-100 text-gray-600"; // default
+                    
+                    if (timeData.active) {
+                        if (totalMins >= 290) { // 4h50 = Danger
+                            badgeClass = "bg-red-100 text-red-700 border border-red-200 animate-pulse";
+                            alertsCount++;
+                        } else if (totalMins >= 270) { // 4h30 = Warning
+                            badgeClass = "bg-yellow-100 text-yellow-700 border border-yellow-200";
+                            alertsCount++;
+                        } else {
+                            badgeClass = "bg-green-50 text-green-700 border border-green-200";
+                        }
+                    }
+
+                    timeCell.innerHTML = `<span class="px-2.5 py-1 rounded-md text-xs font-semibold ${badgeClass}">${formatted}</span>`;
+                }
+            });
+            
+            document.getElementById('stat-alerts').innerText = alertsCount;
+            if(alertsCount > 0) {
+                document.getElementById('stat-alerts').classList.add('text-red-600');
+            } else {
+                document.getElementById('stat-alerts').classList.remove('text-red-600');
+            }
+        }
+
+        // --- Realtime Data Listeners ---
+        function startDataListeners() {
+            if (!auth.currentUser) return;
+
+            const staffRef = collection(db, 'restaurants', RESTAURANT_ID, 'staff');
+            unsubscribeStaff = onSnapshot(staffRef, (snapshot) => {
+                staffList = [];
+                snapshot.forEach(doc => staffList.push({ id: doc.id, ...doc.data() }));
+                staffList.sort((a, b) => a.name.localeCompare(b.name));
+                renderStaffTable();
+                renderDashboard();
+            }, (error) => showToast("Erreur lecture employés", "error"));
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const shiftsRef = collection(db, 'restaurants', RESTAURANT_ID, 'shifts');
+            const q = query(shiftsRef, where('date', '==', todayStr));
+            
+            unsubscribeShifts = onSnapshot(q, (snapshot) => {
+                activeShifts = {};
+                let online = 0;
+                let onbreak = 0;
+
+                snapshot.forEach(doc => {
+                    const shift = doc.data();
+                    if (!shift.endTime) {
+                        activeShifts[shift.badge] = { id: doc.id, ...shift };
+                        
+                        if (shift.breakStart && !shift.breakEnd) {
+                            onbreak++;
+                        } else {
+                            online++;
+                        }
+                    }
+                });
+                
+                document.getElementById('stat-online').innerText = online;
+                document.getElementById('stat-break').innerText = onbreak;
+                renderDashboard();
+            }, (error) => showToast("Erreur lecture services", "error"));
+        }
+
+        function stopDataListeners() {
+            if(unsubscribeStaff) unsubscribeStaff();
+            if(unsubscribeShifts) unsubscribeShifts();
+        }
+
+        // --- Render UI ---
+        function renderDashboard() {
+            const tbody = document.getElementById('dashboard-tbody');
+            tbody.innerHTML = '';
+
+            if (staffList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Aucun employé. Ajoutez-en dans l\'onglet Employés.</td></tr>';
+                return;
+            }
+
+            staffList.forEach(staff => {
+                const shift = activeShifts[staff.id];
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors";
+                
+                let statusHtml = '<div class="flex items-center text-gray-500"><span class="status-dot dot-offline"></span> Repos</div>';
+                let timeHtml = '<span class="text-gray-300">-</span>';
+                let actionsHtml = `<button onclick="actionStartShift('${staff.id}', '${staff.name.replace(/'/g, "\\'")}')" class="bg-mcd-dark hover:bg-black text-white px-3 py-1.5 rounded text-xs font-medium transition-colors">Démarrer</button>`;
+
+                if (shift) {
+                    // Ongoing Shift
+                    timeHtml = `<div id="time-${staff.id}">--:--</div>`;
+
+                    if (shift.breakStart && !shift.breakEnd) {
+                        // On Break
+                        statusHtml = '<div class="flex items-center text-yellow-600 font-medium"><span class="status-dot dot-break"></span> En Pause</div>';
+                        actionsHtml = `<button onclick="actionEndBreak('${shift.id}')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors shadow-sm">Retour Pause</button>`;
+                    } else {
+                        // Working
+                        statusHtml = '<div class="flex items-center text-green-600 font-medium"><span class="status-dot dot-online"></span> En Service</div>';
+                        actionsHtml = `
+                            <div class="flex justify-end space-x-2">
+                                <button onclick="actionStartBreak('${shift.id}')" class="bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-yellow-200">Départ Pause</button>
+                                <button onclick="actionEndShift('${shift.id}')" class="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-red-200">Terminer</button>
+                            </div>
+                        `;
+                    }
+                }
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-gray-900">${staff.name}</td>
+                    <td class="px-6 py-4 text-gray-500">#${staff.id}</td>
+                    <td class="px-6 py-4">${statusHtml}</td>
+                    <td class="px-6 py-4">${timeHtml}</td>
+                    <td class="px-6 py-4 text-right">${actionsHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            updateContinuousTimers();
+        }
+
+        function renderStaffTable() {
+            const tbody = document.getElementById('staff-tbody');
+            tbody.innerHTML = '';
+            
+            if (staffList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-8 text-center text-gray-500">Aucun employé trouvé.</td></tr>';
+                return;
+            }
+
+            staffList.forEach(staff => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-gray-600">#${staff.id}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900">${staff.name}</td>
+                    <td class="px-6 py-4 text-right space-x-2">
+                        <button onclick="editStaff('${staff.id}', '${staff.name.replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-2 rounded transition-colors" title="Modifier">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button onclick="confirmDeleteStaff('${staff.id}')" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded transition-colors" title="Supprimer">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Shift Actions ---
+        window.actionStartShift = async function(badge, name) {
+            const now = new Date();
+            try {
+                await addDoc(collection(db, 'restaurants', RESTAURANT_ID, 'shifts'), {
+                    badge: badge,
+                    name: name,
+                    date: now.toISOString().split('T')[0],
+                    startTime: now.toISOString(),
+                    endTime: null,
+                    breakStart: null,
+                    breakEnd: null
+                });
+                showToast("Service démarré", "success");
+            } catch (e) { showToast("Erreur", "error"); }
+        };
+
+        window.actionStartBreak = async function(shiftId) {
+            try {
+                await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'shifts', shiftId), {
+                    breakStart: new Date().toISOString()
+                });
+                showToast("Départ en pause", "warning");
+            } catch (e) { showToast("Erreur", "error"); }
+        };
+
+        window.actionEndBreak = async function(shiftId) {
+            try {
+                await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'shifts', shiftId), {
+                    breakEnd: new Date().toISOString()
+                });
+                showToast("Retour de pause enregistré", "success");
+            } catch (e) { showToast("Erreur", "error"); }
+        };
+
+        window.actionEndShift = function(shiftId) {
+            openConfirmModal("Fin de service", "Confirmez-vous la fin de ce service ?", async () => {
+                try {
+                    await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'shifts', shiftId), {
+                        endTime: new Date().toISOString()
+                    });
+                    showToast("Service terminé", "success");
+                } catch (e) { showToast("Erreur", "error"); }
+            });
+        };
+
+        // --- Staff Management Functions ---
+        const staffModal = document.getElementById('staff-modal');
+        const staffModalContent = document.getElementById('staff-modal-content');
+        
+        window.openStaffModal = function() {
+            document.getElementById('staff-form').reset();
+            document.getElementById('staff-mode').value = 'add';
+            document.getElementById('staff-badge').disabled = false;
+            document.getElementById('modal-title').innerText = 'Ajouter un Employé';
+            
+            staffModal.classList.remove('hidden');
+            setTimeout(() => staffModalContent.classList.remove('scale-95'), 10);
+        };
+
+        window.closeStaffModal = function() {
+            staffModalContent.classList.add('scale-95');
+            setTimeout(() => staffModal.classList.add('hidden'), 200);
+        };
+
+        window.editStaff = function(badge, name) {
+            document.getElementById('staff-mode').value = 'edit';
+            document.getElementById('staff-original-badge').value = badge;
+            document.getElementById('staff-badge').value = badge;
+            document.getElementById('staff-badge').disabled = true; // Cannot edit ID
+            document.getElementById('staff-name').value = name;
+            document.getElementById('modal-title').innerText = 'Modifier l\'Employé';
+            
+            staffModal.classList.remove('hidden');
+            setTimeout(() => staffModalContent.classList.remove('scale-95'), 10);
+        };
+
+        document.getElementById('staff-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mode = document.getElementById('staff-mode').value;
+            const badge = document.getElementById('staff-badge').value.trim();
+            const name = document.getElementById('staff-name').value.trim();
+            
+            if (!badge || !name) return;
+
+            try {
+                if (mode === 'add') {
+                    // Check if exists
+                    const docSnap = await getDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge));
+                    if(docSnap.exists()) {
+                        showToast("Ce numéro de badge existe déjà", "error");
+                        return;
+                    }
+                    await setDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge), { name: name });
+                    showToast("Employé ajouté");
+                } else {
+                    await updateDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge), { name: name });
+                    showToast("Employé modifié");
+                }
+                closeStaffModal();
+            } catch (err) {
+                showToast("Erreur de sauvegarde", "error");
+            }
+        });
+
+        // --- Generic Confirm Modal ---
+        let confirmCallback = null;
+        window.openConfirmModal = function(title, message, callback) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-message').innerText = message;
+            confirmCallback = callback;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        };
+        
+        window.closeConfirmModal = function() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            confirmCallback = null;
+        };
+
+        document.getElementById('confirm-btn').addEventListener('click', () => {
+            if(confirmCallback) confirmCallback();
+            closeConfirmModal();
+        });
+
+        window.confirmDeleteStaff = function(badge) {
+            openConfirmModal("Supprimer", `Voulez-vous vraiment supprimer l'employé #${badge} ?`, async () => {
+                try {
+                    await deleteDoc(doc(db, 'restaurants', RESTAURANT_ID, 'staff', badge));
+                    showToast("Employé supprimé");
+                } catch (e) {
+                    showToast("Erreur lors de la suppression", "error");
+                }
+            });
+        };
+
+        // --- Testing function ---
+        window.testNotification = function() {
+            showToast("Test d'alerte déclenché avec succès", "warning");
+        }
+
+    </script>
+</body>
+</html>
